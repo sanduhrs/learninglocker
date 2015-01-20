@@ -10,24 +10,39 @@ use app\locker\helpers\Conflict as Conflict;
 use app\locker\helpers\ValidationException as ValidationException;
 
 class EloquentStatementRepository implements StatementRepository {
-
-  // Defines properties to be set to construtor parameters.
-  protected $statement, $activity, $query;
-  protected $sent_ids = array();
-
   // Number of statements to return by default.
   const DEFAULT_LIMIT = 100;
 
-  /**
-   * Constructs a new EloquentStatementRepository.
-   * @param Statement $statement
-   * @param Activity $activity
-   * @param Query $query
-   */
-  public function __construct(Statement $statement, Activity $activity, Query $query) {
-    $this->statement = $statement;
-    $this->activity  = $activity;
-    $this->query     = $query;
+  protected $sent_ids = array();
+
+  public function aggregate($lrsId, array $pipeline) {
+    if (strpos(json_encode($pipeline), '$out') !== false) return;
+
+    $pipeline[0] = array_merge_recursive([
+      '$match' => [self::LRS_ID_KEY => $lrsId]
+    ], $pipeline[0]);
+
+    return $this->db->statements->aggregate($pipeline);
+  }
+
+  private function selectStatement(array $statements) {
+    return array_map(function ($statement) {
+      return $statement->$statement;
+    }, $statements);
+  }
+
+  private function match($match) {
+    return [
+      '$match' => $match
+    ];
+  }
+
+  private function projectStatement($project = null) {
+    $project = $project ?: ['$project' => []];
+    return $project['$project'] = array_merge($project['$project'], [
+      '_id' => 0,
+      'statement' => 1
+    ]);
   }
 
   /**
@@ -39,25 +54,60 @@ class EloquentStatementRepository implements StatementRepository {
    * @return Builder
    */
   public function show($lrsId, $id, $voided = false, $active = true) {
-    return $this->query->where($lrsId, [
-      ['statement.id', '=', $id],
-      ['voided', '=', $voided],
-      ['active', '=', $active]
-    ]);
+    $statements = $this->selectStatement($this->aggregate([
+      $this->match([
+        'statement.id' => $id,
+        'voided' => $voided,
+        'active' => $active,
+        'statement.authority' => 'TODO'
+      ]),
+      $this->projectStatement()
+    ]));
+
+    if (is_array($statements) && count($statements) > 0) {
+      return $statements[0];
+    } else {
+      return null;
+    }
+  }
+
+  private function getOptions($defaults, $given_options) {
+    $options = [];
+
+    foreach ($default as $option => $default) {
+      $options[$option] = $this->getOption($option, $given_options, $default);
+    }
+
+    return $option;
+  }
+
+  private function getOption($key, $options, $default = null) {
+    if (!isset($options[$key]) || $options[$key] === null) {
+      return $default;
+    } else {
+      return $options[$key];
+    }
+  }
+
+  private function matchOptions($options, $match) {
+    $match = $match ?: ['$match' => []];
+    $options_match = [];
+
+    foreach ($options as $option => $setting) {
+      $options_match[$setting['key']]
+    }
+
+    return $match['$match'] = array_merge($match['$match'], $options_match);
   }
 
   /**
    * Gets statements from the lrs (with the $lrsId) that match the $filters.
    * @param UUID $lrsId
    * @param [StatementFilter] $filters
-   * @param [StatementFilter] $options
    * @return Builder
    */
-  public function index($lrsId, array $filters, array $options) {
-    $where = [];
-
-    // Defaults filters.
-    $filters = array_merge([
+  public function index($lrsId, array $given_options) {
+    $options = $this->getOptions([
       'agent' => null,
       'activity' => null,
       'verb' => null,
@@ -65,24 +115,19 @@ class EloquentStatementRepository implements StatementRepository {
       'since' => null,
       'until' => null,
       'active' => true,
-      'voided' => false
-    ], $filters);
-
-    // Defaults options.
-    $options = array_merge([
+      'voided' => false,
       'related_activities' => false,
       'related_agents' => false,
       'ascending' => false,
       'format' => 'exact',
       'offset' => 0,
       'limit' => self::DEFAULT_LIMIT
-    ], $options);
+    ], $given_options);
 
-    // Checks params.
-    if ($options['offset'] < 0) throw new \Exception('`offset` must be a positive interger.');
-    if ($options['limit'] < 0) throw new \Exception('`limit` must be a positive interger.');
-    if (!in_array($options['format'], ['ids', 'exact', 'canonical'])) {
-      throw new \Exception('`format` must be `ids`, `exact` or `canonical`.');
+    $match = [];
+
+    if ($options['since']) {
+      $match['statement.stored']
     }
 
     // Filters by date.
