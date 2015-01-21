@@ -187,3 +187,7 @@ class StatementController extends BaseController {
     );
   }
 }
+
+class StatementRetrieverController {
+
+}
