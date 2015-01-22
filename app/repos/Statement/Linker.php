@@ -50,7 +50,10 @@ class Linker implements LinkerInterface {
   }
 
   private function isVoiding(XAPIStatement $statement) {
-    if ($statement->getPropValue('verb.id') === 'http://adlnet.gov/expapi/verbs/voided')
+    return (
+      $statement->getPropValue('verb.id') === 'http://adlnet.gov/expapi/verbs/voided' &&
+      $this->isReferencing($statement)
+    );
   }
 
   private function addRefBy(XAPIStatement $statement, Authority $authority) {
