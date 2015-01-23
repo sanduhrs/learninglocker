@@ -38,18 +38,18 @@ class EloquentLinker implements LinkerInterface {
       ->first();
 
     if ($voided_statement !== null) {
-      if ($this->isVoidingArray($voided_statement)) throw new \Exception(
-        'Cannot void a voiding statement'
-      );
+      if ($this->isVoidingArray($voided_statement)) throw new \Exception(trans(
+        'xapi.errors.void_voider'
+      ));
 
       (new Getter)
         ->where($authority)
         ->where('statement.id', $voided_statement['statement']['id'])
         ->update(['voided' => false]);
     } else {
-      throw new \Exception(
-        'Cannot a void a statement that does not exist.'
-      );
+      throw new \Exception(trans(
+        'xapi.errors.void_voider'
+      ));
     }
   }
 

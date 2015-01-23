@@ -54,16 +54,16 @@ class EloquentInserter implements InserterInterface {
     return (new ActivityRepo)->store(
       $authority,
       (object) [
-        'id' => $statement->getPropValue('object.id')
+        'id' => $statement->getPropValue('object.id'),
         'definition' => $statement->getPropValue('object.definition')
       ]
-    )
+    );
   }
 
   private function constructModel(XAPIStatement $statement) {
     return [
-      'lrs' => array_pop(explode('/', $statement->getPropValue('authority.account.homePage')));
-      'statement' => $statement->getValue();
+      'lrs' => array_pop(explode('/', $statement->getPropValue('authority.account.homePage'))),
+      'statement' => $statement->getValue(),
       'active' => false,
       'voided' => false,
       'timestamp' => new MongoDate(strtotime($statement->getPropValue('timestamp')))

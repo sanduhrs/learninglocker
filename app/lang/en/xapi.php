@@ -7,6 +7,8 @@ return [
     "json" => ":value is not valid JSON.",
     "formatting" => "There is a problem with the formatting of your submitted content.",
     "no_attachment" => "There were no attachments.",
-    "required" => "`:field` is required but not set."
+    "required" => "`:field` is required but not set.",
+    "void_voider" => "Cannot void a voiding statement",
+    "void_existence" => "Cannot a void a statement that does not exist."
   ]
 ];
