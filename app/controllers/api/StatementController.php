@@ -8,6 +8,9 @@ class StatementController extends BaseController {
       LockerRequest::getParam('pipeline'),
       true
     ) ?: [['$match' => []]];
-    return \Response::json(StatementRepository::aggregate($this->getAuthority(), $pipeline)); 
+
+    return IlluminateResponse::json(
+      StatementRepository::aggregate($this->getAuthority(), $pipeline)
+    );
   }
 }

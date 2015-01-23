@@ -1,7 +1,9 @@
 <?php namespace Controllers\API;
 
 use \Illuminate\Routing\Controller as IlluminateController;
-use \Illuminate\Http\Request as IlluminateRequest;
+use \IlluminateRequest as IlluminateRequest;
+use \LockerRequest as LockerRequest;
+use \Repos\Authority\EloquentRepository as AuthorityRepository;
 
 abstract class BaseController extends IlluminateController {
   private function getCORSHeaders() {
@@ -14,8 +16,8 @@ abstract class BaseController extends IlluminateController {
     ];
   }
 
-  private function getAuthority() {
-    return AuthorityRepository::showFromAuth(
+  protected function getAuthority() {
+    return (new AuthorityRepository)->showFromBasicAuth(
       LockerRequest::getUser(),
       LockerRequest::getPassword()
     );

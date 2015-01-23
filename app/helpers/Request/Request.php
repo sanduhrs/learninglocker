@@ -1,4 +1,6 @@
-<?php namespace locker;
+<?php namespace Helpers;
+
+use \IlluminateRequest as IlluminateRequest;
 
 class Request {
 
@@ -17,7 +19,7 @@ class Request {
   public function getParams() {
     // If no params were cached, get them.
     if ($this->params === null || count($this->params) < 1) {
-      $requestParams = \Request::all();
+      $requestParams = \IlluminateRequest::all();
       $payloadParams = $this->getPayloadParams();
 
       // Merges params if they are both arrays.
@@ -48,7 +50,7 @@ class Request {
    * @return String user in the basic auth.
    */
   public function getUser() {
-    return \Request::getUser() ?: $this->getAuth()[self::authUser];
+    return \IlluminateRequest::getUser() ?: $this->getAuth()[self::authUser];
   }
 
   /**
@@ -56,7 +58,7 @@ class Request {
    * @return String password in the basic auth.
    */
   public function getPassword() {
-    return \Request::getPassword() ?: $this->getAuth()[self::authPass];
+    return \IlluminateRequest::getPassword() ?: $this->getAuth()[self::authPass];
   }
 
   /**
@@ -66,7 +68,7 @@ class Request {
    * @return mixed Value of the header.
    */
   public function header($key, $default=null) {
-    $value = \Request::header($key);
+    $value = \IlluminateRequest::header($key);
 
     // If the key is set in the headers then return it.
     if (isset($value)) {
@@ -92,7 +94,7 @@ class Request {
    * @return AssocArray Stored/cached params.
    */
   public function getPayload() {
-    return \Request::getContent();
+    return \IlluminateRequest::getContent();
   }
 
   /**
@@ -114,7 +116,7 @@ class Request {
   }
 
   public function getContent() {
-    return $this->getParam('content', \Request::getContent());
+    return $this->getParam('content', \IlluminateRequest::getContent());
   }
 
   /**

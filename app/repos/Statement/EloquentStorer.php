@@ -4,17 +4,21 @@ interface StorerInterface {
   public function store(array $statements, Authority $authority, array $attachments);
 }
 
-class Storer implements StorerInterface {
+class EloquentStorer implements StorerInterface {
   public function store(array $statements, Authority $authority, array $attachments) {
-    $statements = $this->constructed_statements($statements, $authority);
-    
-    $this->insertStatements($statements, $authority);
-    $this->linkStatements($statements, $authority);
-    $this->activateStatements($statements, $authority);
-    
-    $this->storeAttachments($attachments, $authority);
-    
-    return array_keys($statements);
+    try {
+      $statements = $this->constructed_statements($statements, $authority);
+      
+      $this->insertStatements($statements, $authority);
+      $this->linkStatements($statements, $authority);
+      $this->activateStatements($statements, $authority);
+      
+      $this->storeAttachments($attachments, $authority);
+      
+      return IlluminateResponse::json(array_keys($statements), 200);
+    } catch (ConflictException $ex) {
+      return IlluminateResponse::make($ex->getMessage(), 409);
+    }
   }
 
   private function constructStatements(array $statements, Authority $authority) {
@@ -42,7 +46,7 @@ class Storer implements StorerInterface {
 
       // Adds $constructed_statement to $constructed_statements.
       if (isset($constructed_statements[$statement->id])) {
-        $this->checkMatch($constructed_statements, $constructed_statements[$statement->id]);
+        (new Inserter)->checkMatch($constructed_statements, $constructed_statements[$statement->id]);
       } else {
         $constructed_statements[$statement->id] = $constructed_statement;
       }
@@ -56,7 +60,7 @@ class Storer implements StorerInterface {
   }
 
   private function linkStatements(array $statements, Authority $authority) {
-    return (new Linker)->insert($statements, $authority);
+    return (new Linker)->link($statements, $authority);
   }
 
   private function activateStatements(array $statements, Authority $authority) {

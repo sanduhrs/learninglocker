@@ -1,8 +1,9 @@
 <?php namespace Controllers\XAPI;
 
-use \Illuminate\Http\Response as IlluminateResponse;
-use \Illuminate\Http\Request as IlluminateRequest;
-use \locker\Request as LockerRequest;
+use \IlluminateResponse as IlluminateResponse;
+use \IlluminateRequest as IlluminateRequest;
+use \LockerRequest as LockerRequest;
+use \Repos\Statement\EloquentRepository as StatementRepository;
 
 class StatementController extends BaseController {
 
@@ -135,7 +136,7 @@ class StatementController extends BaseController {
     }
 
     // Gets the statements.
-    $statements = StatementRepository::index($this->getAuthority(), $options);
+    $statements = (new StatementRepository)->index($this->getAuthority(), $options);
 
     // Constructs the response.
     return IlluminateResponse::json([
@@ -146,7 +147,7 @@ class StatementController extends BaseController {
 
   private function show($id, $voided) {
     // Gets the statement.
-    $statement = StatementRepository::show($this->getAuthority(), $id, $voided);
+    $statement = (new StatementRepository)->show($this->getAuthority(), $id, $voided);
 
     // Returns the response.
     if ($statement !== null) {
@@ -186,8 +187,4 @@ class StatementController extends BaseController {
       $parts['attachments']
     );
   }
-}
-
-class StatementRetrieverController {
-
 }

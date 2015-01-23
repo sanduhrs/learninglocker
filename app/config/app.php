@@ -108,16 +108,13 @@ return array(
     'Illuminate\Validation\ValidationServiceProvider',
     'Illuminate\View\ViewServiceProvider',
     'Illuminate\Workbench\WorkbenchServiceProvider',
-    'Locker\Repository\RepositoryServiceProvider',
-    'Locker\Data\DataServiceProvider',
-    'Locker\Graphing\GraphServiceProvider',
+    'Helpers\RequestServiceProvider',
     'Jenssegers\Mongodb\MongodbServiceProvider',
     'DaveJamesMiller\Breadcrumbs\ServiceProvider',
     'Way\Generators\GeneratorsServiceProvider',
     'Barryvdh\Cors\CorsServiceProvider',
     'LucaDegasperi\OAuth2Server\OAuth2ServerServiceProvider',
     'JsLocalization\JsLocalizationServiceProvider',
-    'locker\RequestServiceProvider',
     'Philo\Translate\TranslateServiceProvider'
 
   ),
@@ -174,8 +171,8 @@ return array(
     'Queue'           => 'Illuminate\Support\Facades\Queue',
     'Redirect'        => 'Illuminate\Support\Facades\Redirect',
     'Redis'           => 'Illuminate\Support\Facades\Redis',
-    'Request'         => 'Illuminate\Support\Facades\Request',
-    'Response'        => 'Illuminate\Support\Facades\Response',
+    'IlluminateRequest' => 'Illuminate\Support\Facades\Request',
+    'IlluminateResponse' => 'Illuminate\Support\Facades\Response',
     'Route'           => 'Illuminate\Support\Facades\Route',
     'Schema'          => 'Illuminate\Support\Facades\Schema',
     'Seeder'          => 'Illuminate\Database\Seeder',
@@ -188,7 +185,7 @@ return array(
     'Breadcrumbs'     => 'DaveJamesMiller\Breadcrumbs\Facade',
     'AuthorizationServer' => 'LucaDegasperi\OAuth2Server\Facades\AuthorizationServerFacade',
     'ResourceServer'  => 'LucaDegasperi\OAuth2Server\Facades\ResourceServerFacade',
-    'LockerRequest' => 'locker\RequestFacade'
+    'LockerRequest' => 'Helpers\RequestFacade'
 
   ),
 

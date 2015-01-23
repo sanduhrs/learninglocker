@@ -1,9 +1,9 @@
 <?php namespace Controllers\XAPI;
 
-use \Illuminate\Http\Response as IlluminateResponse;
-use \Illuminate\Http\Request as IlluminateRequest;
+use \IlluminateResponse as IlluminateResponse;
+use \IlluminateRequest as IlluminateRequest;
 use \Controllers\API\BaseController as APIController;
-use \locker\Request as LockerRequest;
+use \LockerRequest as LockerRequest;
 
 abstract class BaseController extends APIController {
   abstract protected function get();

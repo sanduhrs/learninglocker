@@ -1,4 +1,4 @@
-<?php namespace locker;
+<?php namespace Helpers;
 
 use Illuminate\Support\ServiceProvider;
 

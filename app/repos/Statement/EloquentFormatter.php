@@ -5,7 +5,7 @@ interface FormatterInterface {
   public function toIds(array $statements);
 }
 
-class Formatter implements FormatterInterface {
+class EloquentFormatter implements FormatterInterface {
   public function toCanonical(array $statements, array $langs) {
     return array_map(function (XAPIStatement $statement) use ($langs) {
       return $this->getStatementCanonical($statement, $langs);

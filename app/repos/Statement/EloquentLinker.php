@@ -5,7 +5,7 @@ interface LinkerInterface {
   public function voidStatements(array $statements, Authority $authority);
 }
 
-class Linker implements LinkerInterface {
+class EloquentLinker implements LinkerInterface {
   private $to_update = [];
 
   public function link(array $statements, Authority $authority) {
@@ -46,7 +46,19 @@ class Linker implements LinkerInterface {
         ->where($authority)
         ->where('statement.id', $voided_statement['statement']['id'])
         ->update(['voided' => false]);
+    } else {
+      throw new \Exception(
+        'Cannot a void a statement that does not exist.'
+      );
     }
+  }
+
+  private function isVoidingArray(array $statement) {
+    return $this->isVoiding(XAPIStatement::createFromJson(json_encode($statement)));
+  }
+
+  private function isReferencingArray(array $statement) {
+    return $this->isVoiding(XAPIStatement::createFromJson(json_encode($statement))); 
   }
 
   private function isVoiding(XAPIStatement $statement) {
@@ -54,6 +66,10 @@ class Linker implements LinkerInterface {
       $statement->getPropValue('verb.id') === 'http://adlnet.gov/expapi/verbs/voided' &&
       $this->isReferencing($statement)
     );
+  }
+
+  private function isReferencing(XAPIStatement $statement) {
+    return $statement->getPropValue('statement.object.objectType') === 'StatementRef';
   }
 
   private function addRefBy(XAPIStatement $statement, Authority $authority) {
@@ -79,7 +95,7 @@ class Linker implements LinkerInterface {
   }
 
   private function updateLinks(array $statement, Authority $authority, array $refs = null) {
-    if ($refs === null && $this->isReferencing($statement)) {
+    if ($refs === null && $this->isReferencing($statement['statement'])) {
       $refs = $this->updateLinks($this->getReferredStatement($statement), $authority);
     }
 
