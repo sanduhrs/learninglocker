@@ -1,6 +1,5 @@
 <?php
 
-
 Route::group(['prefix'=>'data/xAPI'], function () {
   Route::any('statements', [
     'uses' => 'Controllers\XAPI\StatementController@selectMethod'
