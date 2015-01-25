@@ -3,25 +3,36 @@
 use \Models\Authority as Authority;
 
 interface Repository {
-  public function index();
-  public function store();
-  public function show($id);
+  public function index(Authority $authority);
+  public function store(Authority $authority, $data);
+  public function show(Authority $authority, $id);
   public function showFromBasicAuth($key, $secret);
-  public function update($id);
-  public function destroy($id);
+  public function update(Authority $authority, $id, $data);
+  public function destroy(Authority $authority, $id);
 }
 
 class EloquentRepository implements Repository {
-  public function index() {
+  private function where(Authority $authority) {
+    return Authority::where(
+      'actor.account.homePage',
+      'like',
+      $authority->actor->account->homePage.'%'
+    );
+  }
+
+  public function index(Authority $authority) {
+    return $this->where($authority)->get();
+  }
+
+  public function store(Authority $authority, $data) {
 
   }
 
-  public function store() {
-
-  }
-
-  public function show($id) {
-
+  public function show(Authority $authority, $id) {
+    return $this
+      ->where($authority)
+      ->where('_id', $id)
+      ->first();
   }
 
   public function showFromBasicAuth($key, $secret) {
@@ -31,11 +42,11 @@ class EloquentRepository implements Repository {
       ->first();
   }
 
-  public function update($id) {
+  public function update(Authority $authority, $id, $data) {
 
   }
 
-  public function destroy($id) {
+  public function destroy(Authority $authority, $id) {
 
   }
 }

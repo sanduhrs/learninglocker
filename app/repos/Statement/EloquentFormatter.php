@@ -1,6 +1,7 @@
 <?php namespace Repos\Statement;
 
 use \Models\Authority as Authority;
+use \Helpers\Helper as Helpers;
 
 interface FormatterInterface {
   public function toCanonical(array $statements, array $langs);
@@ -60,20 +61,20 @@ class EloquentFormatter implements FormatterInterface {
     // Processes an anonymous group or actor.
     if (
       $actor->objectType === 'Group' &&
-      $this->getAgentIdentifier($actor) === null
+      Helpers::getAgentIdentifier($actor) === null
     ) {
       $actor->members = array_map(function ($member) {
-        return $this->identifyObject($member, $this->getAgentIdentifier($member));
+        return $this->identifyObject($member, Helpers::getAgentIdentifier($member));
       }, $actor->members);
     } else {
-      $actor = $this->identifyObject($actor, $this->getAgentIdentifier($actor));
+      $actor = $this->identifyObject($actor, Helpers::getAgentIdentifier($actor));
     }
 
     // Replace parts of the statements.
     $statement_value->actor = $actor;
     $statement_value->object = $this->identifyObject(
       $statement_value->object,
-      $this->getAgentIdentifier($statement_value->object) ?: 'id'
+      Helpers::getAgentIdentifier($statement_value->object) ?: 'id'
     );
     return $statement_value;
   }
@@ -83,13 +84,5 @@ class EloquentFormatter implements FormatterInterface {
       $identifier => $object->{$identifier},
       'objectType' => $object->objectType
     ];
-  }
-
-  private function getAgentIdentifier($actor) {
-    if (isset($actor->mbox)) return 'mbox';
-    if (isset($actor->account)) return 'account';
-    if (isset($actor->openid)) return 'openid';
-    if (isset($actor->mbox_sha1sum)) return 'mbox_sha1sum';
-    return null;
   }
 }

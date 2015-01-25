@@ -4,6 +4,7 @@ use \IlluminateResponse as IlluminateResponse;
 use \IlluminateRequest as IlluminateRequest;
 use \LockerRequest as LockerRequest;
 use \Repos\Statement\EloquentRepository as StatementRepository;
+use \Helpers\Exceptions\NotFound as NotFoundException;
 
 class StatementController extends BaseController {
 
@@ -148,14 +149,11 @@ class StatementController extends BaseController {
   }
 
   private function show($id, $voided) {
-    // Gets the statement.
-    $statement = (new StatementRepository)->show($this->getAuthority(), $id, $voided);
-
-    // Returns the response.
-    if ($statement !== null) {
+    try {
+      $statement = (new StatementRepository)->show($this->getAuthority(), $id, $voided);
       return IlluminateResponse::json($statement->statement, 200, $this->getCORSHeaders());
-    } else {
-      return IlluminateResponse::json(null, 404, $this->getCORSHeaders());
+    } catch (NotFoundException $ex) {
+      return IlluminateResponse::make('', 404, $this->getCORSHeaders());
     }
   }
 

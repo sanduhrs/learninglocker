@@ -14,4 +14,12 @@ class Helpers {
     $current_date->setTimezone(new \DateTimeZone(\Config::get('app.timezone')));
     return $current_date->format('Y-m-d\TH:i:s.uP');
   }
+
+  static function getAgentIdentifier(\stdClass $actor) {
+    if (isset($actor->mbox)) return 'mbox';
+    if (isset($actor->account)) return 'account';
+    if (isset($actor->openid)) return 'openid';
+    if (isset($actor->mbox_sha1sum)) return 'mbox_sha1sum';
+    return null;
+  }
 }

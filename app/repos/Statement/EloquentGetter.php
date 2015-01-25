@@ -2,7 +2,9 @@
 
 use \Models\Authority as Authority;
 use \Models\Statement as Statement;
+use \Helpers\Exceptions\NotFound as NotFoundException;
 use \DB as Mongo;
+use \Helpers\Helpers as Helpers;
 
 interface GetterInterface {
   public function aggregate(Authority $authority, array $pipeline);
@@ -34,7 +36,13 @@ class EloquentGetter implements GetterInterface {
     $this->validateIndexOptions($options);
 
     $pipeline = $this->constructIndexPipeline($options);
-    return $this->aggregate($authority, $pipeline)['result'];
+    $statements = $this->aggregate($authority, $pipeline)['result'];
+
+    switch ($options['format']) {
+      case 'exact': return $statements;
+      case 'ids': return (new EloquentFormatter)->toIds($statements);
+      case 'canonical': return (new EloquentFormatter)->toCanonical($statements, []);
+    }
   }
 
   public function show(Authority $authority, $id, $voided = false, $active = true) {
@@ -45,7 +53,7 @@ class EloquentGetter implements GetterInterface {
       ->where('active', $active)
       ->first();
 
-    if ($statement === null) throw new NotFoundException();
+    if ($statement === null) throw new NotFoundException($id, 'Statement');
 
     return $statement;
   }
@@ -150,12 +158,12 @@ class EloquentGetter implements GetterInterface {
 
   private function matchAgent($agent, array $options) {
     $agent = json_decode($agent);
-    if (gettype($agent) === 'object') throw new \Exception('Invalid agent');
+    if (gettype($agent) !== 'object') throw new \Exception('Invalid agent');
 
     $identifier_key = Helpers::getAgentIdentifier($agent);
     $identifier_value = $agent->{$identifier_key};
 
-    return $this->matchOption($agent, $options['related_agents'], [
+    return $this->matchOption($identifier_value, $options['related_agents'], [
       "statement.actor.$identifier_key",
       "statement.object.$identifier_key"
     ], [
@@ -179,14 +187,14 @@ class EloquentGetter implements GetterInterface {
   private function matchOption($value, $option, array $less, array $more) {
     $or = [];
 
-    if ($option === true) {
+    if ((bool) $option === true) {
       foreach ($more as $key) {
-        $or[$key] = $value;
+        $or[] = [$key => $value];
       }
     }
 
     foreach ($less as $key) {
-      $or[$key] = $value;
+      $or[] = [$key => $value];
     }
 
     return [
