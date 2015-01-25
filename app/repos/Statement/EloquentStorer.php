@@ -1,5 +1,7 @@
 <?php namespace Repos\Statement;
 
+use \Models\Authority as Authority;
+
 interface StorerInterface {
   public function store(array $statements, Authority $authority, array $attachments);
 }
@@ -8,13 +10,13 @@ class EloquentStorer implements StorerInterface {
   public function store(array $statements, Authority $authority, array $attachments) {
     try {
       $statements = $this->constructed_statements($statements, $authority);
-      
+
       $this->insertStatements($statements, $authority);
       $this->linkStatements($statements, $authority);
       $this->activateStatements($statements, $authority);
-      
+
       $this->storeAttachments($attachments, $authority);
-      
+
       return IlluminateResponse::json(array_keys($statements), 200);
     } catch (ConflictException $ex) {
       return IlluminateResponse::make($ex->getMessage(), 409);

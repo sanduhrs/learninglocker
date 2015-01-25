@@ -1,7 +1,7 @@
-<?php namespace Model;
+<?php namespace Models;
 
-use \Jenssegers\Mongodb\Model as DBModel;
+use \Jenssegers\Mongodb\Model as Model;
 
-class Statement extends DBModel {
+class Statement extends Model {
   protected $collection = 'statements';
 }

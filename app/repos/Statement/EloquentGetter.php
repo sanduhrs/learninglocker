@@ -1,21 +1,32 @@
 <?php namespace Repos\Statement;
 
+use \Models\Authority as Authority;
+use \Models\Statement as Statement;
+use \DB as Mongo;
+
 interface GetterInterface {
   public function aggregate(Authority $authority, array $pipeline);
   public function index(Authority $authority, array $options);
   public function show(Authority $authority, $id, $voided = false, $active = true);
   public function where(Authority $authority);
+  public function count(Authority $authority);
 }
 
 class EloquentGetter implements GetterInterface {
+  const DEFAULT_LIMIT = 100;
+
+  public function count (Authority $authority) {
+    return $this->where($authority)->count();
+  }
+
   public function aggregate(Authority $authority, array $pipeline) {
     if (strpos(json_encode($pipeline), '$out') !== false) return;
 
     $pipeline[0] = array_merge_recursive([
-      '$match' => [self::LRS_ID_KEY => $lrsId]
+      '$match' => ['lrs._id' => $authority->getLRS()]
     ], $pipeline[0]);
 
-    return $this->db->statements->aggregate($pipeline);
+    return Mongo::getMongoDB()->statements->aggregate($pipeline);
   }
 
   public function index(Authority $authority, array $options) {
@@ -23,7 +34,7 @@ class EloquentGetter implements GetterInterface {
     $this->validateIndexOptions($options);
 
     $pipeline = $this->constructIndexPipeline($options);
-    return $this->aggregation($authority, $pipeline)['result'];
+    return $this->aggregate($authority, $pipeline)['result'];
   }
 
   public function show(Authority $authority, $id, $voided = false, $active = true) {
@@ -40,10 +51,7 @@ class EloquentGetter implements GetterInterface {
   }
 
   public function where(Authority $authority) {
-    return ModelStatement::where(
-      'statement.authority.account.homePage',
-      $authority->actor->account->homePage
-    );
+    return Statement::where('lrs._id', $authority->getLRS());
   }
 
   private function constructIndexPipeline(array $options) {
@@ -52,8 +60,12 @@ class EloquentGetter implements GetterInterface {
     ]];
 
     // Sorts statements.
-    $order = $options['ascending'] === true ? 1 : 0;
+    $order = $options['ascending'] === true ? 1 : -1;
     $pipeline[] = ['$sort' => ['statement.stored' => $order]];
+
+    // Limit and offset.
+    $pipeline[] = ['$skip' => (int) $options['offset']];
+    $pipeline[] = ['$limit' => (int) $options['limit']];
 
     // Outputs statement properties.
     $pipeline[] = ['$group' => $this->groupStatementProps()];
@@ -142,7 +154,7 @@ class EloquentGetter implements GetterInterface {
 
     $identifier_key = Helpers::getAgentIdentifier($agent);
     $identifier_value = $agent->{$identifier_key};
-    
+
     return $this->matchOption($agent, $options['related_agents'], [
       "statement.actor.$identifier_key",
       "statement.object.$identifier_key"
@@ -188,7 +200,7 @@ class EloquentGetter implements GetterInterface {
   }
 
   private function getIndexOptions(array $given_options) {
-    return $this->getOptions($options, [
+    return $this->getOptions($given_options, [
       'agent' => null,
       'activity' => null,
       'verb' => null,
@@ -210,7 +222,7 @@ class EloquentGetter implements GetterInterface {
     $options = [];
 
     foreach ($defaults as $key => $default) {
-      $options[$key] = $getOption($given_options, $key, $default);
+      $options[$key] = $this->getOption($given_options, $key, $default);
     }
 
     return $options;

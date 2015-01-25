@@ -1,5 +1,7 @@
 <?php namespace Repos\Statement;
 
+use \Models\Authority as Authority;
+
 interface InserterInterface {
   public function insert(array $statements, Authority $authority);
 }
@@ -9,10 +11,10 @@ class EloquentInserter implements InserterInterface {
     $statement_models = array_map(function (XAPIStatement $statement) {
       $this->checkDuplicate($statement, $authority);
       $this->storeActivityProfile($statement, $authority);
-      
+
       return $this->constructModel($statement);
     }, $statements);
-    
+
     return $this->insertModels($statements_models);
   }
 

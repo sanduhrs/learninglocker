@@ -1,5 +1,7 @@
 <?php namespace Repos\Statement;
 
+use \Models\Authority as Authority;
+
 interface LinkerInterface {
   public function link(array $statements, Authority $authority);
   public function voidStatements(array $statements, Authority $authority);
@@ -58,7 +60,7 @@ class EloquentLinker implements LinkerInterface {
   }
 
   private function isReferencingArray(array $statement) {
-    return $this->isVoiding(XAPIStatement::createFromJson(json_encode($statement))); 
+    return $this->isVoiding(XAPIStatement::createFromJson(json_encode($statement)));
   }
 
   private function isVoiding(XAPIStatement $statement) {

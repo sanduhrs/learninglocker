@@ -1,5 +1,7 @@
 <?php namespace Repos\Statement;
 
+use \Models\Authority as Authority;
+
 interface FormatterInterface {
   public function toCanonical(array $statements, array $langs);
   public function toIds(array $statements);
@@ -39,7 +41,7 @@ class EloquentFormatter implements FormatterInterface {
     $acceptable_langs = array_filter($display_langs, function ($display_lang) use ($langs) {
       return in_array($display_lang, $langs);
     });
-    
+
     $acceptable_langs = array_values($acceptable_langs);
 
     if (count($acceptable_langs) > 0) {

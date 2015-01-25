@@ -4,9 +4,10 @@ use \Illuminate\Routing\Controller as IlluminateController;
 use \IlluminateRequest as IlluminateRequest;
 use \LockerRequest as LockerRequest;
 use \Repos\Authority\EloquentRepository as AuthorityRepository;
+use \Helpers\Helpers as Helpers;
 
 abstract class BaseController extends IlluminateController {
-  private function getCORSHeaders() {
+  protected function getCORSHeaders() {
     return [
       'Access-Control-Allow-Origin' => IlluminateRequest::root(),
       'Access-Control-Allow-Methods' => 'GET, PUT, POST, DELETE, OPTIONS',

@@ -98,18 +98,20 @@ class StatementController extends BaseController {
   }
 
   private function getMoreLink($total, $limit, $offset) {
+    $no_offset = $offset === null;
+
     // Uses defaults.
     $total = $total ?: 0;
-    $limit = $limit ?: StatementRepository::DEFAULT_LIMIT;
+    $limit = $limit ?: 100;
     $offset = $offset ?: 0;
 
     // Calculates the $next_offset.
-    $next_offset = $offse + $limit;
+    $next_offset = $offset + $limit;
     if ($total <= $next_offset) return '';
 
     // Changes (when defined) or appends (when undefined) offset.
     $current_url = IlluminateRequest::fullUrl();
-    if ($offset !== null) {
+    if (!$no_offset) {
       return str_replace(
         'offset=' . $offset,
         'offset=' . $next_offset,
@@ -140,7 +142,7 @@ class StatementController extends BaseController {
 
     // Constructs the response.
     return IlluminateResponse::json([
-      'more' => $this->getMoreLink(count($statements), $options['limit'], $options['offset']),
+      'more' => $this->getMoreLink((new StatementRepository)->count($this->getAuthority()), $options['limit'], $options['offset']),
       'statements' => $statements
     ], 200, $this->getCORSHeaders());
   }
