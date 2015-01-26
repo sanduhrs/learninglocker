@@ -12,7 +12,7 @@ class EloquentInserter implements InserterInterface {
       $this->checkDuplicate($statement, $authority);
       $this->storeActivityProfile($statement, $authority);
 
-      return $this->constructModel($statement);
+      return $this->constructModel($statement, $authority);
     }, $statements);
 
     return $this->insertModels($statements_models);
@@ -62,9 +62,11 @@ class EloquentInserter implements InserterInterface {
     );
   }
 
-  private function constructModel(XAPIStatement $statement) {
+  private function constructModel(XAPIStatement $statement, Authority $authority) {
     return [
-      'lrs' => array_pop(explode('/', $statement->getPropValue('authority.account.homePage'))),
+      'lrs' => [
+        '_id' => $authority->getLRS(),
+      ],
       'statement' => $statement->getValue(),
       'active' => false,
       'voided' => false,

@@ -1,8 +1,8 @@
 <?php
 
-$app = new Illuminate\Foundation\Application;
-
 use \Helpers\Helpers as Helpers;
+
+$app = new Illuminate\Foundation\Application;
 
 $env = $app->detectEnvironment(function () use ($app) {
   // Attempts to set the environment using the hostname (env => hostname).
@@ -13,7 +13,7 @@ $env = $app->detectEnvironment(function () use ($app) {
 
   // Attempts to set the environment using the domain (env => domain).
   $env = Helpers::getEnvironment([
-    'local' => ['127.0.0.1', 'localhost']
+    'local' => ['127.0.0.1', 'localhost', 'dev.ll']
     // 'production' => ['*.example.com']
   ], $app['request']->getHost());
   if ($env) return $env;

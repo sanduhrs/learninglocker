@@ -1,7 +1,7 @@
 <?php namespace Repos\Statement;
 
 use \Models\Authority as Authority;
-use \Helpers\Helper as Helpers;
+use \Helpers\Helpers as Helpers;
 
 interface FormatterInterface {
   public function toCanonical(array $statements, array $langs);
@@ -10,29 +10,36 @@ interface FormatterInterface {
 
 class EloquentFormatter implements FormatterInterface {
   public function toCanonical(array $statements, array $langs) {
-    return array_map(function (XAPIStatement $statement) use ($langs) {
+    $statements = json_decode(json_encode($statements));
+    return array_map(function (\stdClass $statement) use ($langs) {
       return $this->getStatementCanonical($statement, $langs);
     }, $statements);
   }
 
   public function toIds(array $statements) {
-    return array_map(function (XAPIStatement $statement) {
+    $statements = json_decode(json_encode($statements));
+    return array_map(function (\stdClass $statement) {
       return $this->getStatementIds($statement);
     }, $statements);
   }
 
-  private function getStatementCanonical(XAPIStatement $statement, array $langs) {
-    $statement_value = $statement->getValue();
-    $definition = $statement->object->definition;
+  private function getStatementCanonical(\stdClass $statement, array $langs) {
+    if (isset($statement->object->definition)) {
+      $definition = $statement->object->definition;
 
-    if (isset($definition->name)) {
-      $definition->name = $this->canonicalise($definition->name, $langs);
-    }
-    if (isset($definition->description)) {
-      $definition->description = $this->canonicalise($definition->description, $langs);
+      if (isset($definition->name)) {
+        $definition->name = $this->canonicalise($definition->name, $langs);
+      }
+      if (isset($definition->description)) {
+        $definition->description = $this->canonicalise($definition->description, $langs);
+      }
+
+      $statement->object->definition = $definition;
     }
 
-    $statement->object->definition = $definition;
+    if (isset($statement->verb->display)) {
+      $statement->verb->display = $this->canonicalise($statement->verb->display, $langs);
+    }
     return $statement;
   }
 
@@ -54,16 +61,15 @@ class EloquentFormatter implements FormatterInterface {
     }
   }
 
-  private function getStatementIds(XAPIStatement $statement) {
-    $statement_value = $statement->getValue();
-    $actor = $statement_value->actor;
+  private function getStatementIds(\stdClass $statement) {
+    $actor = $statement->actor;
 
     // Processes an anonymous group or actor.
     if (
       $actor->objectType === 'Group' &&
       Helpers::getAgentIdentifier($actor) === null
     ) {
-      $actor->members = array_map(function ($member) {
+      $actor->members = array_map(function (\stdClass $member) {
         return $this->identifyObject($member, Helpers::getAgentIdentifier($member));
       }, $actor->members);
     } else {
@@ -71,12 +77,12 @@ class EloquentFormatter implements FormatterInterface {
     }
 
     // Replace parts of the statements.
-    $statement_value->actor = $actor;
-    $statement_value->object = $this->identifyObject(
-      $statement_value->object,
-      Helpers::getAgentIdentifier($statement_value->object) ?: 'id'
+    $statement->actor = $actor;
+    $statement->object = $this->identifyObject(
+      $statement->object,
+      Helpers::getAgentIdentifier($statement->object) ?: 'id'
     );
-    return $statement_value;
+    return $statement;
   }
 
   private function identifyObject($object, $identifier) {
