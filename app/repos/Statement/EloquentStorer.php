@@ -1,6 +1,8 @@
 <?php namespace Repos\Statement;
 
 use \Models\Authority as Authority;
+use \Helpers\Helpers as Helpers;
+use \Locker\XApi\Statement as XAPIStatement;
 
 interface StorerInterface {
   public function store(array $statements, Authority $authority, array $attachments);
@@ -8,33 +10,29 @@ interface StorerInterface {
 
 class EloquentStorer implements StorerInterface {
   public function store(array $statements, Authority $authority, array $attachments) {
-    try {
-      $statements = $this->constructed_statements($statements, $authority);
+    $statements = $this->constructStatements($statements, $authority);
 
-      $this->insertStatements($statements, $authority);
-      $this->linkStatements($statements, $authority);
-      $this->activateStatements($statements, $authority);
+    $this->insertStatements($statements, $authority);
+    $this->linkStatements($statements, $authority);
+    $this->activateStatements($statements, $authority);
 
-      $this->storeAttachments($attachments, $authority);
+    $this->storeAttachments($attachments, $authority);
 
-      return IlluminateResponse::json(array_keys($statements), 200);
-    } catch (ConflictException $ex) {
-      return IlluminateResponse::make($ex->getMessage(), 409);
-    }
+    return array_keys($statements);
   }
 
   private function constructStatements(array $statements, Authority $authority) {
     $constructed_statements = [];
 
     foreach ($statements as $statement) {
-      $statement->authority = $authority->actor;
+      $statement->authority = $authority->getActor();
       $statement->stored = Helpers::getCurrentDate();
 
-      if (!$statement->timestamp) {
+      if (!isset($statement->timestamp)) {
         $statement->timestamp = $statement->stored;
       }
 
-      if (!$statement->id) {
+      if (!isset($statement->id)) {
         $statement->id = Helpers::makeUUID();
       }
 
@@ -42,7 +40,7 @@ class EloquentStorer implements StorerInterface {
 
       // Validates $constructed_statement.
       $errors = $constructed_statement->validate();
-      if (count($errors) > 0) {
+      if (count($errors) > 0) {dd($errors);
         throw new \Exception(json_encode($errors));
       }
 
@@ -58,15 +56,15 @@ class EloquentStorer implements StorerInterface {
   }
 
   private function insertStatements(array $statements, Authority $authority) {
-    return (new Inserter)->insert($statements, $authority);
+    return (new EloquentInserter)->insert($statements, $authority);
   }
 
   private function linkStatements(array $statements, Authority $authority) {
-    return (new Linker)->link($statements, $authority);
+    return (new EloquentLinker)->link($statements, $authority);
   }
 
   private function activateStatements(array $statements, Authority $authority) {
-    return (new Getter)
+    return (new EloquentGetter)
       ->where($authority)
       ->whereIn('statement.id', array_keys($statements))
       ->update(['active' => true]);

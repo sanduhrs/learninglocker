@@ -1,6 +1,7 @@
 <?php namespace Repos\Statement;
 
 use \Models\Authority as Authority;
+use \Locker\XApi\Statement as XAPIStatement;
 
 interface LinkerInterface {
   public function link(array $statements, Authority $authority);
@@ -16,9 +17,9 @@ class EloquentLinker implements LinkerInterface {
   }
 
   public function updateReferences(array $statements, Authority $authority) {
-    $this->to_update = array_map(function (XAPIStatement $statement) use ($authority) {
+    $this->to_update = array_values(array_map(function (XAPIStatement $statement) use ($authority) {
       return $this->addRefBy($statement, $authority);
-    }, $statements);
+    }, $statements));
 
     while (count($this->to_update) > 0) {
       $this->updateLinks($this->to_update[0], $authority);
@@ -34,7 +35,7 @@ class EloquentLinker implements LinkerInterface {
   private function voidStatement(XAPIStatement $statement, Authority $authority) {
     if (!$this->isVoiding($statement)) return;
 
-    $voided_statement = (new Getter)
+    $voided_statement = (new EloquentGetter)
       ->where($authority)
       ->where('statement.id', $statement->getPropValue('object.id'))
       ->first();
@@ -44,7 +45,7 @@ class EloquentLinker implements LinkerInterface {
         'xapi.errors.void_voider'
       ));
 
-      (new Getter)
+      (new EloquentGetter)
         ->where($authority)
         ->where('statement.id', $voided_statement['statement']['id'])
         ->update(['voided' => false]);
@@ -77,35 +78,39 @@ class EloquentLinker implements LinkerInterface {
   private function addRefBy(XAPIStatement $statement, Authority $authority) {
     $statement_id = $statement->getPropValue('id');
 
-    $model = (new Getter)
+    $model = (new EloquentGetter)
       ->where($authority)
-      ->where('statement.id', $statement_id);
+      ->where('statement.id', $statement_id)
+      ->first()->toArray();
 
-    $model['refBy'] = (new Getter)
+    $model['refBy'] = (new EloquentGetter)
       ->where($authority)
       ->where('statement.object.id', $statement_id)
-      ->where('statement.object.objectType', 'StatementRef');
+      ->where('statement.object.objectType', 'StatementRef')
+      ->lists('statement.id');
 
     return $model;
   }
 
   private function getReferredStatement(array $statement) {
-    return (new Getter)
+    return (new EloquentGetter)
       ->where($authority)
       ->where('statement.id', $statement['statement']['object']['id'])
       ->first();
   }
 
   private function updateLinks(array $statement, Authority $authority, array $refs = null) {
-    if ($refs === null && $this->isReferencing($statement['statement'])) {
+    $statement_copy = $statement;
+
+    if ($refs === null && $this->isReferencingArray($statement['statement'])) {
       $refs = $this->updateLinks($this->getReferredStatement($statement), $authority);
     }
 
     // Updates stored refs.
-    $refs = array_merge($refs, $statement['refs']);
+    $refs = array_merge($refs ?: [], isset($statement['refs']) ? $statement['refs'] : []);
 
     // Saves statement with new refs.
-    (new Getter)->where($authority)->update([
+    (new EloquentGetter)->where($authority)->update([
       'refs' => $refs
     ]);
 
@@ -115,8 +120,8 @@ class EloquentLinker implements LinkerInterface {
     }, $statement['refBy']);
 
     // Removes statement from to_update.
-    $updated_index = array_search($this->to_update, $statement);
-    if ($update_index !== false) {
+    $updated_index = array_search($statement_copy, $this->to_update);
+    if ($updated_index !== false) {
       array_splice($this->to_update, $updated_index, 1);
     }
 

@@ -9,4 +9,8 @@ class Authority extends Model {
     $home_page = explode('/', $this->actor['account']['homePage']);
     return array_pop($home_page);
   }
+
+  public function getActor() {
+    return json_decode(json_encode($this->actor));
+  }
 }

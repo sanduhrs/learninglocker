@@ -7,7 +7,7 @@ interface Repository {
   public function count(Authority $authority);
   public function index(Authority $authority, array $options);
   public function show(Authority $authority, $id, $voided = false, $active = true);
-  public function store(Authority $authority, array $statements);
+  public function store(Authority $authority, array $statements, array $attachments);
 }
 
 class EloquentRepository implements Repository {
@@ -27,7 +27,7 @@ class EloquentRepository implements Repository {
     return (new EloquentGetter)->show($authority, $id, $voided, $active);
   }
 
-  public function store(Authority $authority, array $statements) {
-    return (new EloquentStorer)->store($authority);
+  public function store(Authority $authority, array $statements, array $attachments) {
+    return (new EloquentStorer)->store($statements, $authority, $attachments);
   }
 }

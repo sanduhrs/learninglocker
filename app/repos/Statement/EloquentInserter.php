@@ -1,6 +1,9 @@
 <?php namespace Repos\Statement;
 
 use \Models\Authority as Authority;
+use \Locker\XApi\Statement as XAPIStatement;
+use \MongoDate as MongoDate;
+use \Helpers\Exceptions\Conflict as ConflictException;
 
 interface InserterInterface {
   public function insert(array $statements, Authority $authority);
@@ -8,18 +11,18 @@ interface InserterInterface {
 
 class EloquentInserter implements InserterInterface {
   public function insert(array $statements, Authority $authority) {
-    $statement_models = array_map(function (XAPIStatement $statement) {
+    $statement_models = array_map(function (XAPIStatement $statement) use ($authority) {
       $this->checkDuplicate($statement, $authority);
       $this->storeActivityProfile($statement, $authority);
 
       return $this->constructModel($statement, $authority);
     }, $statements);
 
-    return $this->insertModels($statements_models);
+    return $this->insertModels($statement_models, $authority);
   }
 
   private function checkDuplicate(XAPIStatement $statement, Authority $authority) {
-    $duplicate = (new Getter)
+    $duplicate = (new EloquentGetter)
       ->where($authority)
       ->where('statement.id', $statement->getPropValue('id'))
       ->first();
@@ -74,8 +77,8 @@ class EloquentInserter implements InserterInterface {
     ];
   }
 
-  private function insertModels(XAPIStatement $statement, Authority $authority) {
-    return (new Getter)
+  private function insertModels(array $statement_models, Authority $authority) {
+    return (new EloquentGetter)
       ->where($authority)
       ->insert($statement_models);
   }

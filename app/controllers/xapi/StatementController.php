@@ -5,6 +5,7 @@ use \IlluminateRequest as IlluminateRequest;
 use \LockerRequest as LockerRequest;
 use \Repos\Statement\EloquentRepository as StatementRepository;
 use \Helpers\Exceptions\NotFound as NotFoundException;
+use \Helpers\Exceptions\Conflict as ConflictException;
 
 class StatementController extends BaseController {
 
@@ -39,27 +40,41 @@ class StatementController extends BaseController {
       ]));
     }
 
-    return IlluminateResponse::json($this->createStatements(), 200);
+    try {
+      return IlluminateResponse::json($this->createStatements(), 200, $this->getCORSHeaders());
+    } catch (ConflictException $ex) {
+      return IlluminateResponse::json([
+        'message' => $ex->getMessage(),
+        'trace' => $ex->getTrace()
+      ], 409, $this->getCORSHeaders());
+    }
   }
 
   protected function update() {
-    $this->createStatements(function ($statements) {
-      $statement_id = \LockerRequest::getParam(self::STATEMENT_ID);
+    try {
+      $this->createStatements(function ($statements) {
+        $statement_id = \LockerRequest::getParam(self::STATEMENT_ID);
 
-      // Returns a error if identifier is not present.
-      if (!$statement_id) throw new \Exception(
-        trans('xapi.errors.required', [
-          'field' => self::STATEMENT_ID
-        ])
-      );
+        // Returns a error if identifier is not present.
+        if (!$statement_id) throw new \Exception(
+          trans('xapi.errors.required', [
+            'field' => self::STATEMENT_ID
+          ])
+        );
 
-      // Adds the ID to the statement.
-      $statements[0]->id = $statement_id;
+        // Adds the ID to the statement.
+        $statements[0]->id = $statement_id;
 
-      return $statements;
-    });
+        return $statements;
+      });
 
-    return IlluminateResponse::make('', 200);
+      return IlluminateResponse::make('', 200);
+    } catch (ConflictException $ex) {
+      return IlluminateResponse::json([
+        'message' => $ex->getMessage(),
+        'trace' => $ex->getTrace()
+      ], 409, $this->getCORSHeaders());
+    }
   }
 
   protected function destroy() {
@@ -138,12 +153,19 @@ class StatementController extends BaseController {
       $options[$param] = LockerRequest::getParam($param);
     }
 
+    // Adds langs.
+    $options['langs'] = explode(',', IlluminateRequest::header('Accept-Language', ''));
+
     // Gets the statements.
     $statements = (new StatementRepository)->index($this->getAuthority(), $options);
 
     // Constructs the response.
     return IlluminateResponse::json([
-      'more' => $this->getMoreLink((new StatementRepository)->count($this->getAuthority()), $options['limit'], $options['offset']),
+      'more' => $this->getMoreLink(
+        (new StatementRepository)->count($this->getAuthority()),
+        $options['limit'],
+        $options['offset']
+      ),
       'statements' => $statements
     ], 200, $this->getCORSHeaders());
   }
@@ -181,10 +203,10 @@ class StatementController extends BaseController {
     }
 
     // Saves $statements with attachments.
-    return $this->statement->create(
-      $statements,
+    return (new StatementRepository)->store(
       $this->getAuthority(),
-      $parts['attachments']
-    );
+      $statements,
+      is_array($parts['attachments']) ? $parts['attachments'] : []
+    ); 
   }
 }

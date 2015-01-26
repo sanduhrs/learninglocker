@@ -5,3 +5,5 @@ class NotFound extends \Exception {
     parent::__construct("Could not find $class with id $id.");
   }
 }
+
+class ConflictException extends \Exception {}

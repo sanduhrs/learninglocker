@@ -41,7 +41,7 @@ class EloquentGetter implements GetterInterface {
     switch ($options['format']) {
       case 'exact': return $statements;
       case 'ids': return (new EloquentFormatter)->toIds($statements);
-      case 'canonical': return (new EloquentFormatter)->toCanonical($statements, []);
+      case 'canonical': return (new EloquentFormatter)->toCanonical($statements, $options['langs']);
     }
   }
 
@@ -222,7 +222,8 @@ class EloquentGetter implements GetterInterface {
       'ascending' => false,
       'format' => 'exact',
       'offset' => 0,
-      'limit' => self::DEFAULT_LIMIT
+      'limit' => self::DEFAULT_LIMIT,
+      'langs' => []
     ]);
   }
 
