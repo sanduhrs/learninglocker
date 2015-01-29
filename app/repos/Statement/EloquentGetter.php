@@ -38,7 +38,8 @@ class EloquentGetter implements GetterInterface {
     $statements_pipeline = $this->projectLimitedStatements($index_pipeline, $options);
     $count_pipeline = $this->projectCountedStatements($index_pipeline);
     $statements = $this->aggregate($authority, $statements_pipeline)['result'];
-    $count = $this->aggregate($authority, $count_pipeline)['result'][0]['count'];
+    $count = $this->aggregate($authority, $count_pipeline)['result'];
+    $count = isset($count[0]['count']) ? $count[0]['count'] : 0;
 
     // Formats statements.
     switch ($options['format']) {
