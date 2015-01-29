@@ -150,19 +150,19 @@ class StatementController extends BaseController {
     // Gets the parameter values.
     $options = [];
     foreach ($params as $param) {
-      $options[$param] = LockerRequest::getParam($param);
+      $options[$param] = LockerRequest::getParam($param, null);
     }
 
     // Adds langs.
     $options['langs'] = explode(',', IlluminateRequest::header('Accept-Language', ''));
 
     // Gets the statements.
-    $statements = (new StatementRepository)->index($this->getAuthority(), $options);
+    list($statements, $count) = (new StatementRepository)->index($this->getAuthority(), $options);
 
     // Constructs the response.
     return IlluminateResponse::json([
       'more' => $this->getMoreLink(
-        (new StatementRepository)->count($this->getAuthority()),
+        $count,
         $options['limit'],
         $options['offset']
       ),

@@ -11,15 +11,10 @@ interface GetterInterface {
   public function index(Authority $authority, array $options);
   public function show(Authority $authority, $id, $voided = false, $active = true);
   public function where(Authority $authority);
-  public function count(Authority $authority);
 }
 
 class EloquentGetter implements GetterInterface {
   const DEFAULT_LIMIT = 100;
-
-  public function count (Authority $authority) {
-    return $this->where($authority)->count();
-  }
 
   public function aggregate(Authority $authority, array $pipeline) {
     if (strpos(json_encode($pipeline), '$out') !== false) return;
@@ -35,14 +30,20 @@ class EloquentGetter implements GetterInterface {
     $options = $this->getIndexOptions($options);
     $this->validateIndexOptions($options);
 
-    $pipeline = $this->constructIndexPipeline($options);
-    $statements = $this->aggregate($authority, $pipeline)['result'];
+    $index_pipeline = $this->constructIndexPipeline($options);
+    $statements_pipeline = $this->projectLimitedStatements($index_pipeline, $options);
+    $count_pipeline = $this->projectCountedStatements($index_pipeline);
+    $statements = $this->aggregate($authority, $statements_pipeline)['result'];
+    $count = $this->aggregate($authority, $count_pipeline)['result'][0]['count'];
 
     switch ($options['format']) {
-      case 'exact': return $statements;
-      case 'ids': return (new EloquentFormatter)->toIds($statements);
-      case 'canonical': return (new EloquentFormatter)->toCanonical($statements, $options['langs']);
+      case 'exact': $statements = $statements; break;
+      case 'ids': $statements = (new EloquentFormatter)->toIds($statements); break;
+      case 'canonical': $statements = (new EloquentFormatter)->toCanonical($statements, $options['langs']); break;
+      default: throw new \Exception('Invalid format.');
     }
+
+    return [$statements, $count];
   }
 
   public function show(Authority $authority, $id, $voided = false, $active = true) {
@@ -71,6 +72,10 @@ class EloquentGetter implements GetterInterface {
     $order = $options['ascending'] === true ? 1 : -1;
     $pipeline[] = ['$sort' => ['statement.stored' => $order]];
 
+    return $pipeline;
+  }
+
+  private function projectLimitedStatements(array $pipeline, array $options) {
     // Limit and offset.
     $pipeline[] = ['$skip' => (int) $options['offset']];
     $pipeline[] = ['$limit' => (int) $options['limit']];
@@ -78,6 +83,19 @@ class EloquentGetter implements GetterInterface {
     // Outputs statement properties.
     $pipeline[] = ['$group' => $this->groupStatementProps()];
     $pipeline[] = ['$project' => $this->projectStatementProps()];
+
+    return $pipeline;
+  }
+
+  private function projectCountedStatements(array $pipeline) {
+    $pipeline[] = ['$group' => [
+      '_id' => '$lrs._id',
+      'count' => ['$sum' => 1]
+    ]];
+    $pipeline[] = ['$project' => [
+      '_id' => 0,
+      'count' => 1
+    ]];
 
     return $pipeline;
   }
