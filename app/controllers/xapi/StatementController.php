@@ -6,6 +6,7 @@ use \LockerRequest as LockerRequest;
 use \Repos\Statement\EloquentRepository as StatementRepository;
 use \Helpers\Exceptions\NotFound as NotFoundException;
 use \Helpers\Exceptions\Conflict as ConflictException;
+use \Helpers\Attachments as AttachmentsHelper;
 
 class StatementController extends BaseController {
 
@@ -68,7 +69,7 @@ class StatementController extends BaseController {
         return $statements;
       });
 
-      return IlluminateResponse::make('', 200);
+      return IlluminateResponse::make('', 204);
     } catch (ConflictException $ex) {
       return IlluminateResponse::json([
         'message' => $ex->getMessage(),
@@ -91,7 +92,7 @@ class StatementController extends BaseController {
     $mime_type = count($types) >= 1 ? $types[0] : $types;
 
     if ($mime_type == 'multipart/mixed') {
-      $components = Attachments::setAttachments($contentType, $content);
+      $components = AttachmentsHelper::setAttachments($contentType, $content);
 
       // Validates components.
       if (empty($components)) throw new \Exception(
@@ -214,6 +215,6 @@ class StatementController extends BaseController {
       $this->getAuthority(),
       $statements,
       is_array($parts['attachments']) ? $parts['attachments'] : []
-    ); 
+    );
   }
 }

@@ -5,7 +5,7 @@ use \IlluminateRequest as IlluminateRequest;
 use \Controllers\API\BaseController as APIController;
 use \LockerRequest as LockerRequest;
 use \Locker\XApi\Version as XAPIVersion;
-use \Helpers\Exception\NoAuth as NoAuthException;
+use \Helpers\Exceptions\NoAuth as NoAuthException;
 
 abstract class BaseController extends APIController {
   abstract protected function get();
@@ -28,12 +28,12 @@ abstract class BaseController extends APIController {
         'message' => $e->getMessage(),
         'trace' => $e->getTrace()
       ], 401, $this->getCORSHeaders());
-    } /*catch (\Exception $e) {
+    } catch (\Exception $e) {
       return IlluminateResponse::json([
         'message' => $e->getMessage(),
         'trace' => $e->getTrace()
       ], 400, $this->getCORSHeaders());
-    }*/
+    }
   }
 
   private function getMethod() {

@@ -14,16 +14,14 @@ abstract class BaseController extends IlluminateController {
   protected function getAuthority() {
     $user = LockerRequest::getUser();
     $pass = LockerRequest::getPassword();
+    $auth = LockerRequest::header('Authorization');
 
-    if ($user === null || $pass === null) throw new NoAuthException();
-    if (!$this->isBase64(LockerRequest::header('Authorization'))) throw new \Exception(
+    if ($auth === null) throw new NoAuthException();
+    if (!$this->isBase64(substr($auth, 6))) throw new \Exception(
       'Authorization details should be Base 64.'
     );
 
-    return (new AuthorityRepository)->showFromBasicAuth(
-      LockerRequest::getUser(),
-      LockerRequest::getPassword()
-    );
+    return (new AuthorityRepository)->showFromBasicAuth($user, $pass);
   }
 
   private function isBase64($value) {
