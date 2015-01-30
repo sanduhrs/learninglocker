@@ -1,6 +1,9 @@
 <?php namespace Repos\Document;
 
-use \Illuminate\Database\Query\Builder as Builder;
+use \Jenssegers\Mongodb\Eloquent\Builder as Builder;
+use \Models\Authority as Authority;
+use \Models\Document as Document;
+use \Carbon\Carbon as Carbon;
 
 interface Repository {
   public function index(Authority $authority, array $data);
@@ -11,10 +14,10 @@ interface Repository {
 }
 
 abstract class EloquentRepository implements Repository {
-  protected static $DOCUMENT_TYPE = '';
-  protected static $DOCUMENT_IDENTIFIER = '';
-  protected static $AP_PROPS = [];
-  protected static $DATA_PROPS = [];
+  protected static $document_type = '';
+  protected static $document_identifier = '';
+  protected static $ap_props = [];
+  protected static $data_props = [];
 
   abstract protected function constructIndexQuery(Builder $query, array $data);
   abstract protected function constructShowQuery(Builder $query, array $data);
@@ -24,15 +27,21 @@ abstract class EloquentRepository implements Repository {
   }
 
   public function index(Authority $authority, array $data) {
+    return $this->indexBuilder($authority, $data)->get();
+  }
+
+  protected function indexBuilder(Authority $authority, array $data) {
     $data = $this->getData($data);
-    $query = $this->constructIndexQuery($this->where($authority), $data);
-    return $query->get();
+    return $this->constructIndexQuery($this->where($authority), $data);
   }
 
   public function show(Authority $authority, array $data) {
+    return $this->showBuilder($authority, $data)->first();
+  }
+
+  protected function showBuilder(Authority $authority, array $data) {
     $data = $this->getData($data);
-    $query = $this->constructShowQuery($this->where($authority), $data);
-    return $query->first();
+    return $this->constructShowQuery($this->where($authority), $data);
   }
 
   public function update(Authority $authority, array $data) {
@@ -58,14 +67,15 @@ abstract class EloquentRepository implements Repository {
     // Updates document.
     if ($existing_document === null) {
       $document = new Document;
-      $document->lrs = $lrs;
-      $document->documentType = static::DOCUMENT_TYPE;
+      $document->lrs = $authority->getLRS();
+      $document->documentType = static::$document_type;
       $document = $this->setActivityProviderProps($document, $data);
     } else {
       $document = $existing_document;
     }
 
     // Saves document.
+    $updated = isset($data['Updated']) ? $data['Updated'] : Carbon::now()->toISO8601String();
     $document->updated_at = new Carbon($updated);
     $document->setContent($data['content_info'], $data['method']);
     $document->save();
@@ -73,8 +83,31 @@ abstract class EloquentRepository implements Repository {
     return $document;
   }
 
+  public function destroy(Authority $authority, array $data) {
+    $data['since'] = null;
+
+    if (isset($data[static::$document_identifier])) {
+      $result = $this->showBuilder($authority, $data);
+    } else {
+      $result = $this->indexBuilder($authority, $data);
+    }
+
+    $documents = $result->get();
+
+    foreach ($documents as $doc) {
+      if ($doc->contentType !== 'application/json' && $doc->contentType !== 'text/plain') {
+        $path = $doc->getFilePath();
+        if (file_exists($path)) {
+          unlink($path);
+        }
+      }
+    }
+
+    return $result->delete();
+  }
+
   private function getData(array $data) {
-    return array_merge(static::DATA_PROPS, $data);
+    return array_merge(static::$data_props, $data);
   }
 
   private function checkETag($sha, $ifMatch, $ifNoneMatch, $noConflict = true) {
@@ -89,7 +122,7 @@ abstract class EloquentRepository implements Repository {
   }
 
   private function setActivityProviderProps(Document $document, array $data) {
-    foreach (static::AP_PROPS as $prop) {
+    foreach (static::$ap_props as $prop) {
       $document->{$prop} = $data[$prop];
     }
     return $document;

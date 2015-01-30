@@ -141,34 +141,35 @@ class EloquentGetter implements GetterInterface {
   private function constructMatchPipeline(array $options) {
     return $this->addMatchOptions([], $options, [
       'agent' => function ($agent, array $options) {
+        Helpers::validateAtom(\Locker\XApi\Agent::createFromJSON($agent));
         return $this->matchAgent($agent, $options);
       },
       'verb' => function ($verb) {
-        Helpers::validateAtom(\Locker\XApi\IRI::createFromJSON($verb));
+        Helpers::validateAtom(new \Locker\XApi\IRI($verb));
         return ['statement.verb.id' => $verb];
       },
       'registration' => function ($registration) {
-        Helpers::validateAtom(\Locker\XApi\UUID::createFromJSON($verb));
+        Helpers::validateAtom(new \Locker\XApi\UUID($registration));
         return ['statement.context.registration' => $registration];
       },
       'activity' => function ($activity, array $options) {
-        Helpers::validateAtom(\Locker\XApi\IRI::createFromJSON($verb));
+        Helpers::validateAtom(new \Locker\XApi\IRI($activity));
         return $this->matchActivity($activity, $options);
       },
       'since' => function ($since) {
-        Helpers::validateAtom(\Locker\XApi\Timestamp::createFromJSON($verb));
+        Helpers::validateAtom(new \Locker\XApi\Timestamp($since));
         return ['statement.stored' => ['$gt' => $since]];
       },
       'until' => function ($until) {
-        Helpers::validateAtom(\Locker\XApi\Timestamp::createFromJSON($verb));
+        Helpers::validateAtom(new \Locker\XApi\Timestamp($until));
         return ['statement.stored' => ['$lt' => $until]];
       },
       'active' => function ($active) {
-        Helpers::validateAtom(\Locker\XApi\Boolean::createFromJSON($verb));
+        Helpers::validateAtom(new \Locker\XApi\Boolean($active));
         return ['active' => $active];
       },
       'voided' => function ($voided) {
-        Helpers::validateAtom(\Locker\XApi\Boolean::createFromJSON($verb));
+        Helpers::validateAtom(new \Locker\XApi\Boolean($voided));
         return ['voided' => $voided];
       }
     ]);
@@ -188,8 +189,6 @@ class EloquentGetter implements GetterInterface {
   }
 
   private function matchAgent($agent, array $options) {
-    Helpers::validateAtom(\Locker\XApi\Agent::createFromJSON($agent));
-
     $agent = json_decode($agent);
     if (gettype($agent) !== 'object') throw new \Exception('Invalid agent');
 
@@ -238,6 +237,9 @@ class EloquentGetter implements GetterInterface {
   private function validateIndexOptions(array $options) {
     if ($options['offset'] < 0) throw new \Exception('`offset` must be a positive interger.');
     if ($options['limit'] < 0) throw new \Exception('`limit` must be a positive interger.');
+    Helpers::validateAtom(new \Locker\XApi\Boolean($options['related_agents']));
+    Helpers::validateAtom(new \Locker\XApi\Boolean($options['related_activities']));
+    Helpers::validateAtom(new \Locker\XApi\Boolean($options['attachments']));
   }
 
   private function getIndexOptions(array $given_options) {

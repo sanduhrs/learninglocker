@@ -4,6 +4,7 @@ use \Models\Authority as Authority;
 use \Locker\XApi\Statement as XAPIStatement;
 use \MongoDate as MongoDate;
 use \Helpers\Exceptions\Conflict as ConflictException;
+use \Repos\Document\ActivityProfile\EloquentRepository as ActivityProfileRepo;
 
 interface InserterInterface {
   public function insert(array $statements, Authority $authority);
@@ -56,9 +57,9 @@ class EloquentInserter implements InserterInterface {
   private function storeActivityProfile(XAPIStatement $statement, Authority $authority) {
     if ($statement->getPropValue('object.definition') === null) return;
 
-    return (new ActivityRepo)->store(
+    return (new ActivityProfileRepo)->store(
       $authority,
-      (object) [
+      [
         'id' => $statement->getPropValue('object.id'),
         'definition' => $statement->getPropValue('object.definition')
       ]

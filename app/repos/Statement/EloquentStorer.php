@@ -3,6 +3,8 @@
 use \Models\Authority as Authority;
 use \Helpers\Helpers as Helpers;
 use \Locker\XApi\Statement as XAPIStatement;
+use \Locker\XApi\IMT as XAPIIMT;
+use \Repos\Document\Files as DocumentFiles;
 
 interface StorerInterface {
   public function store(array $statements, Authority $authority, array $attachments);
@@ -78,7 +80,7 @@ class EloquentStorer implements StorerInterface {
       list($raw_headers, $body) = explode($delim . $delim, $attachment, 2);
 
       // Stores the attachment.
-      $file_name = $this->getFileName($raw_headers, $authority);
+      $file_name = $this->getFileName($raw_headers, $delim, $authority);
       $file = fopen($file_name, 'wb');
       $size = fwrite($file, $body);
       fclose( $file );
@@ -89,9 +91,9 @@ class EloquentStorer implements StorerInterface {
     }
   }
 
-  private function getFileName(array $raw_headers, Authority $authority) {
+  private function getFileName($raw_headers, $delim, Authority $authority) {
     // Determines headers.
-    $headers = $this->getHeaders($raw_headers);
+    $headers = $this->getHeaders($raw_headers, $delim);
 
     // Calculates the $file_name.
     $ext = $this->getExtension($headers['content-type']);
@@ -107,10 +109,10 @@ class EloquentStorer implements StorerInterface {
       \File::makeDirectory($destination_path, 0775, true);
     }
 
-    return $destinationPath . $file_name;
+    return $destination_path . $file_name;
   }
 
-  private function getHeaders(array $raw_headers) {
+  private function getHeaders($raw_headers, $delim) {
     $raw_headers = explode($delim, $raw_headers);
     $headers = [];
 
@@ -123,10 +125,8 @@ class EloquentStorer implements StorerInterface {
   }
 
   private function getExtension($content_type) {
-    $ext = array_search($content_type, FileTypes::getMap());
-    if ($ext === false) throw new \Exception(
-      'This file type cannot be supported'
-    );
+    Helpers::validateAtom(new XAPIIMT($content_type));
+    $ext = array_search($content_type, DocumentFiles::$types);
     return $ext;
   }
 }

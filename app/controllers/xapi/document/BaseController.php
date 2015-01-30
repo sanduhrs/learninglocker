@@ -84,7 +84,7 @@ abstract class DocumentController extends BaseController {
     $data['content_info'] = $this->getAttachedContent('content');
     $data['ifMatch'] = LockerRequest::header('If-Match');
     $data['ifNoneMatch'] = LockerRequest::header('If-None-Match');
-    $data['updated'] = LockerRequest::header('Updated');
+    $data['updated'] = $this->getUpdatedHeader();
 
     // Stores the document.
     $document = $repository_handler($this->getAuthority(), $data);
@@ -109,7 +109,7 @@ abstract class DocumentController extends BaseController {
 
     (new static::$document_repo)->destroy(
       $this->getAuthority(),
-      $data ?: []
+      LockerRequest::getParams()
     );
 
     return IlluminateResponse::json(null, 204);
@@ -120,7 +120,7 @@ abstract class DocumentController extends BaseController {
    * @param string $name Field name
    * @return Array
    */
-  public function getAttachedContent($name = 'content') {
+  protected function getAttachedContent($name = 'content') {
     if (LockerRequest::hasParam('method') || $this->method === 'POST') {
       return $this->getPostContent($name);
     } else {
@@ -138,7 +138,7 @@ abstract class DocumentController extends BaseController {
    * @param String $name Field name
    * @return Array
    */
-  public function getPostContent($name){
+  protected function getPostContent($name){
     if (Input::hasFile($name)) {
       $content = Input::file($name);
       $contentType = $content->getClientMimeType();
@@ -160,6 +160,12 @@ abstract class DocumentController extends BaseController {
       'content' => $content,
       'contentType' => $contentType
     ];
+  }
+
+  private function getUpdatedHeader() {
+    $updated = LockerRequest::header('Updated', Carbon::now()->toISO8601String());
+    Helpers::validateAtom(new XAPITimestamp($updated));
+    return $updated;
   }
 
   /**
