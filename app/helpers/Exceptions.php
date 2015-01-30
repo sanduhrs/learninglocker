@@ -7,6 +7,7 @@ class NotFound extends \Exception {
 }
 
 class Conflict extends \Exception {}
+class Precondition extends \Exception {}
 
 class NoAuth extends \Exception {
   public function __construct() {

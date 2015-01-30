@@ -36,7 +36,7 @@ abstract class BaseController extends APIController {
     }
   }
 
-  private function getMethod() {
+  protected function getMethod() {
     return LockerRequest::getParam(
       'method',
       IlluminateRequest::server('REQUEST_METHOD')

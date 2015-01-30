@@ -33,7 +33,8 @@ class EloquentRepository extends DocumentRepository {
   protected function constructShowQuery(Builder $query, array $data) {
     $query = $query->where('documentType', static::$document_type);
     $query = $query->where('activityId', $data['activityId']);
-    $query = $query->where('identId', static::$document_identifier);
+    $query = $query->where(static::$document_identifier, $data[static::$document_identifier]);
+    \Log::info($data[static::$document_identifier]);
 
     return $query;
   }

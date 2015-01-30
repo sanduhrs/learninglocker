@@ -7,6 +7,8 @@ use \Repos\Statement\EloquentRepository as StatementRepository;
 use \Helpers\Exceptions\NotFound as NotFoundException;
 use \Helpers\Exceptions\Conflict as ConflictException;
 use \Helpers\Attachments as AttachmentsHelper;
+use \Helpers\Helpers as Helpers;
+use \Locker\XApi\IMT as XAPIIMT;
 
 class StatementController extends BaseController {
 
@@ -35,6 +37,8 @@ class StatementController extends BaseController {
   }
 
   protected function store() {
+    Helpers::validateAtom(new XAPIIMT(LockerRequest::header('Content-Type')));
+
     if (LockerRequest::hasParam(self::STATEMENT_ID)) {
       throw new \Exception(trans('xapi.errors.id_set', [
         'statement_id' => self::STATEMENT_ID
@@ -52,6 +56,8 @@ class StatementController extends BaseController {
   }
 
   protected function update() {
+    Helpers::validateAtom(new XAPIIMT(LockerRequest::header('Content-Type')));
+
     try {
       $this->createStatements(function ($statements) {
         $statement_id = \LockerRequest::getParam(self::STATEMENT_ID);

@@ -4,6 +4,8 @@ use \Jenssegers\Mongodb\Eloquent\Builder as Builder;
 use \Models\Authority as Authority;
 use \Models\Document as Document;
 use \Carbon\Carbon as Carbon;
+use \Helpers\Exceptions\Precondition as PreconditionException;
+use \Helpers\Exceptions\Conflict as ConflictException;
 
 interface Repository {
   public function index(Authority $authority, array $data);

@@ -39,12 +39,14 @@ class Document extends Eloquent {
 
     if( $this->exists ){
       $decoded_content = json_decode($content, true);
+
       //Check existing content type and incoming content type are both application/json
-      if ( $this->contentType !== 'application/json' || $contentType !== 'application/json' ) {
+      if ($this->contentType !== 'application/json' || $contentType !== 'application/json') {
         throw new \Exception('Both existing content type and incoming content type must be application/json');
       }
+
       //Check existing content and incoming content are both JSON
-      if ( !$this->isJSON($this->content) || !$this->isJSON($decoded_content)  ) {
+      if (!$this->isJSON($this->content) || !$this->isJSON($decoded_content)) {
         throw new \Exception('Both existing content and incoming content must be parsable as JSON in order to use POST');
       }
 

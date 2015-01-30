@@ -4,15 +4,27 @@ use \LockerRequest as LockerRequest;
 use \IlluminateResponse as IlluminateResponse;
 use \Input as Input;
 use \Controllers\XAPI\BaseController as XAPIController;
+use \Carbon\Carbon as Carbon;
+use \Helpers\Helpers as Helpers;
+use \Locker\XApi\Timestamp as XAPITimestamp;
+use \Models\Authority as Authority;
 
-abstract class DocumentController extends BaseController {
+abstract class BaseController extends XAPIController {
 
   // Defines properties to be set by sub classes.
   protected static $document_identifier = '';
   protected static $document_type = '';
   protected static $document_repo = '';
 
-  public function index() {
+  public function get() {
+    if (LockerRequest::getParam(static::$document_identifier) === null) {
+      return $this->index();
+    } else {
+      return $this->show();
+    }
+  }
+
+  protected function index() {
     $documents = (new static::$document_repo)->index(
       $this->getAuthority(),
       LockerRequest::getParams()
@@ -27,7 +39,7 @@ abstract class DocumentController extends BaseController {
    * Returns (GETs) a single document.
    * @return DocumentResponse
    */
-  public function show() {
+  protected function show() {
     $document = (new static::$document_repo)->show(
       $this->getAuthority(),
       LockerRequest::getParams()
@@ -41,16 +53,16 @@ abstract class DocumentController extends BaseController {
       'ETag' => $document->sha
     ]);
 
-    if ($this->method === 'HEAD'){ //Only return headers
-      return \Response::make(null, 200, $headers);
+    if ($this->getMethod() === 'HEAD'){ //Only return headers
+      return IlluminateResponse::make(null, 200, $headers);
     } else {
       switch ($document->contentType) {
         case "application/json":
-          return \Response::json($document->content, 200, $headers);
+          return IlluminateResponse::json($document->content, 200, $headers);
         case "text/plain":
-          return \Response::make($document->content, 200, $headers);
+          return IlluminateResponse::make($document->content, 200, $headers);
         default:
-          return \Response::download(
+          return IlluminateResponse::download(
             $document->getFilePath(),
             $document->content,
             $headers
@@ -64,8 +76,8 @@ abstract class DocumentController extends BaseController {
    * @return Response
    */
   public function store() {
-    return $this->insert(function (Authority $authority, array $data) {
-      (new static::$document_repo)->store($authority, $data);
+    return $this->insert('POST', function (Authority $authority, array $data) {
+      return (new static::$document_repo)->store($authority, $data);
     });
   }
 
@@ -74,14 +86,14 @@ abstract class DocumentController extends BaseController {
    * @return Response
    */
   public function update() {
-    return $this->insert(function (Authority $authority, array $data) {
-      (new static::$document_repo)->update($authority, $data);
+    return $this->insert('PUT', function (Authority $authority, array $data) {
+      return (new static::$document_repo)->update($authority, $data);
     });
   }
 
-  private function insert(callable $repository_handler) {
+  private function insert($method, callable $repository_handler) {
     $data = LockerRequest::getParams();
-    $data['content_info'] = $this->getAttachedContent('content');
+    $data['content_info'] = $this->getAttachedContent($method, 'content');
     $data['ifMatch'] = LockerRequest::header('If-Match');
     $data['ifNoneMatch'] = LockerRequest::header('If-None-Match');
     $data['updated'] = $this->getUpdatedHeader();
@@ -103,9 +115,9 @@ abstract class DocumentController extends BaseController {
    * @return Response
    */
   public function destroy() {
-    if (LockerRequest::hasParam($this->identifier) !== true) {
-      return BaseController::errorResponse('Multiple document DELETE not permitted');
-    }
+    if (LockerRequest::hasParam(static::$document_identifier) !== true) throw new \Exception(
+      'Multiple document DELETE not permitted'
+    );
 
     (new static::$document_repo)->destroy(
       $this->getAuthority(),
@@ -120,8 +132,8 @@ abstract class DocumentController extends BaseController {
    * @param string $name Field name
    * @return Array
    */
-  protected function getAttachedContent($name = 'content') {
-    if (LockerRequest::hasParam('method') || $this->method === 'POST') {
+  protected function getAttachedContent($method, $name = 'content') {
+    if (LockerRequest::hasParam('method') || $method === 'POST') {
       return $this->getPostContent($name);
     } else {
       $contentType = LockerRequest::header('Content-Type', 'text/plain');
