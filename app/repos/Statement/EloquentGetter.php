@@ -144,24 +144,31 @@ class EloquentGetter implements GetterInterface {
         return $this->matchAgent($agent, $options);
       },
       'verb' => function ($verb) {
+        Helpers::validateAtom(\Locker\XApi\IRI::createFromJSON($verb));
         return ['statement.verb.id' => $verb];
       },
       'registration' => function ($registration) {
+        Helpers::validateAtom(\Locker\XApi\UUID::createFromJSON($verb));
         return ['statement.context.registration' => $registration];
       },
       'activity' => function ($activity, array $options) {
+        Helpers::validateAtom(\Locker\XApi\IRI::createFromJSON($verb));
         return $this->matchActivity($activity, $options);
       },
       'since' => function ($since) {
+        Helpers::validateAtom(\Locker\XApi\Timestamp::createFromJSON($verb));
         return ['statement.stored' => ['$gt' => $since]];
       },
       'until' => function ($until) {
+        Helpers::validateAtom(\Locker\XApi\Timestamp::createFromJSON($verb));
         return ['statement.stored' => ['$lt' => $until]];
       },
       'active' => function ($active) {
+        Helpers::validateAtom(\Locker\XApi\Boolean::createFromJSON($verb));
         return ['active' => $active];
       },
       'voided' => function ($voided) {
+        Helpers::validateAtom(\Locker\XApi\Boolean::createFromJSON($verb));
         return ['voided' => $voided];
       }
     ]);
@@ -181,6 +188,8 @@ class EloquentGetter implements GetterInterface {
   }
 
   private function matchAgent($agent, array $options) {
+    Helpers::validateAtom(\Locker\XApi\Agent::createFromJSON($agent));
+
     $agent = json_decode($agent);
     if (gettype($agent) !== 'object') throw new \Exception('Invalid agent');
 

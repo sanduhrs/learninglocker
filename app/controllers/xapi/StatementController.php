@@ -171,6 +171,13 @@ class StatementController extends BaseController {
   }
 
   private function show($id, $voided) {
+    if (array_diff(array_keys(
+      LockerRequest::getParams()),
+      [self::STATEMENT_ID, self::VOIDED_ID]
+    ) != []) throw new \Exception(
+      'Invalid params'
+    );
+
     try {
       $statement = (new StatementRepository)->show($this->getAuthority(), $id, $voided);
       return IlluminateResponse::json($statement->statement, 200, $this->getCORSHeaders());

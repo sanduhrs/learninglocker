@@ -20,8 +20,6 @@ class EloquentRepository extends DocumentRepository {
     'stateId' => null,
     'since' => null,
     'content_info' => null,
-    'ifMatch' => null,
-    'ifNoneMatch' => null,
     'method' => 'POST'
   ];
 
@@ -43,5 +41,9 @@ class EloquentRepository extends DocumentRepository {
     $query = $this->whereRegistration($query, $data['registration']);
 
     return $query;
+  }
+
+  private function checkETag() {
+    return; // State API should not check ETags (issues/493).
   }
 }

@@ -1,26 +1,32 @@
 <?php namespace Controllers\API;
 
 use \Illuminate\Routing\Controller as IlluminateController;
-use \IlluminateRequest as IlluminateRequest;
 use \LockerRequest as LockerRequest;
 use \Repos\Authority\EloquentRepository as AuthorityRepository;
 use \Helpers\Helpers as Helpers;
+use \Helpers\Exceptions\NoAuth as NoAuthException;
 
 abstract class BaseController extends IlluminateController {
   protected function getCORSHeaders() {
-    return [
-      'Access-Control-Allow-Origin' => IlluminateRequest::root(),
-      'Access-Control-Allow-Methods' => 'GET, PUT, POST, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers' => 'Origin, Content-Type, Accept, Authorization, X-Requested-With, X-Experience-API-Version, X-Experience-API-Consistent-Through, Updated',
-      'Access-Control-Allow-Credentials' => 'true',
-      'X-Experience-API-Consistent-Through' => Helpers::getCurrentDate()
-    ];
+    return Helpers::getCORSHeaders();
   }
 
   protected function getAuthority() {
+    $user = LockerRequest::getUser();
+    $pass = LockerRequest::getPassword();
+
+    if ($user === null || $pass === null) throw new NoAuthException();
+    if (!$this->isBase64(LockerRequest::header('Authorization'))) throw new \Exception(
+      'Authorization details should be Base 64.'
+    );
+
     return (new AuthorityRepository)->showFromBasicAuth(
       LockerRequest::getUser(),
       LockerRequest::getPassword()
     );
+  }
+
+  private function isBase64($value) {
+    return base64_encode(base64_decode($value)) === $value;
   }
 }

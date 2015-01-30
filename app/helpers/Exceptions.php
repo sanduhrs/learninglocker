@@ -6,4 +6,10 @@ class NotFound extends \Exception {
   }
 }
 
-class ConflictException extends \Exception {}
+class Conflict extends \Exception {}
+
+class NoAuth extends \Exception {
+  public function __construct() {
+    parent::__construct('Missing authorization.');
+  }
+}

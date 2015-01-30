@@ -4,6 +4,8 @@ use \IlluminateResponse as IlluminateResponse;
 use \IlluminateRequest as IlluminateRequest;
 use \Controllers\API\BaseController as APIController;
 use \LockerRequest as LockerRequest;
+use \Locker\XApi\Version as XAPIVersion;
+use \Helpers\Exception\NoAuth as NoAuthException;
 
 abstract class BaseController extends APIController {
   abstract protected function get();
@@ -13,6 +15,7 @@ abstract class BaseController extends APIController {
 
   public function selectMethod() {
     try {
+      $this->checkVersion();
       switch ($this->getMethod()) {
         case 'HEAD':
         case 'GET': return $this->get();
@@ -20,18 +23,31 @@ abstract class BaseController extends APIController {
         case 'POST': return $this->store();
         case 'DELETE': return $this->destroy();
       }
-    } catch (\Exception $e) {
+    } catch (NoAuthException $e) {
       return IlluminateResponse::json([
         'message' => $e->getMessage(),
         'trace' => $e->getTrace()
-      ], 400);
-    }
+      ], 401, $this->getCORSHeaders());
+    } /*catch (\Exception $e) {
+      return IlluminateResponse::json([
+        'message' => $e->getMessage(),
+        'trace' => $e->getTrace()
+      ], 400, $this->getCORSHeaders());
+    }*/
   }
 
   private function getMethod() {
     return LockerRequest::getParam(
       'method',
       IlluminateRequest::server('REQUEST_METHOD')
+    );
+  }
+
+  protected function checkVersion() {
+    $version = new XAPIVersion(LockerRequest::header('X-Experience-API-Version'));
+    $errors = $version->validate();
+    if (count($errors) > 0) throw new \Exception(
+      'X-Experience-API-Version'
     );
   }
 }

@@ -1,5 +1,9 @@
 <?php namespace Helpers;
 
+use \IlluminateRequest as IlluminateRequest;
+use \Locker\XApi\Atom as XAPIAtom;
+use \Locker\XApi\Errors\Error as XAPIError;
+
 class Helpers {
   static function getEnvironment($config, $givenHost) {
     foreach ($config as $environment => $hosts) {
@@ -34,5 +38,23 @@ class Helpers {
       mt_rand(0, 0x3fff) | 0x8000,
       mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
     );
+  }
+
+  static function getCORSHeaders() {
+    return [
+      'Access-Control-Allow-Origin' => IlluminateRequest::root(),
+      'Access-Control-Allow-Methods' => 'GET, PUT, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers' => 'Origin, Content-Type, Accept, Authorization, X-Requested-With, X-Experience-API-Version, X-Experience-API-Consistent-Through, Updated',
+      'Access-Control-Allow-Credentials' => 'true',
+      'X-Experience-API-Consistent-Through' => Helpers::getCurrentDate(),
+      'X-Experience-API-Version' => '1.0.1'
+    ];
+  }
+
+  static function validateAtom(XAPIAtom $atom) {
+    $errors = $atom->validate();
+    if (count($errors) > 0) throw new \Exception(json_encode(array_map(function (XAPIError $error) {
+      return (string) $error;
+    }, $errors)));
   }
 }
