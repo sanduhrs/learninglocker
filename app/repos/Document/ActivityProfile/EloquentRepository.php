@@ -37,4 +37,11 @@ class EloquentRepository extends DocumentRepository {
 
     return $query;
   }
+
+  protected function validateDestroy(array $data) {
+    if (!isset($data['activityId'])) throw new \Exception(
+      'Missing activityId'
+    );
+    return parent::validateDestroy($data);
+  }
 }

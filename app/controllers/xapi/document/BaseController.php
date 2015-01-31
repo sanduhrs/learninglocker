@@ -129,10 +129,6 @@ abstract class BaseController extends XAPIController {
    * @return Response
    */
   public function destroy() {
-    if (LockerRequest::hasParam(static::$document_identifier) !== true) throw new \Exception(
-      'Multiple document DELETE not permitted'
-    );
-
     (new static::$document_repo)->destroy(
       $this->getAuthority(),
       LockerRequest::getParams()

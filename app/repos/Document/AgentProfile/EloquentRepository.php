@@ -37,4 +37,11 @@ class EloquentRepository extends DocumentRepository {
 
     return $query;
   }
+
+  protected function validateDestroy(array $data) {
+    if (!isset($data['agent'])) throw new \Exception(
+      'Missing agent'
+    );
+    return parent::validateDestroy($data);
+  }
 }

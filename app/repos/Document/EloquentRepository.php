@@ -85,6 +85,7 @@ abstract class EloquentRepository implements Repository {
   }
 
   public function destroy(Authority $authority, array $data) {
+    $this->validateDestroy($data);
     $data['since'] = null;
 
     if (isset($data[static::$document_identifier])) {
@@ -105,6 +106,12 @@ abstract class EloquentRepository implements Repository {
     }
 
     return $result->delete();
+  }
+
+  protected function validateDestroy(array $data) {
+    if (!isset($data[static::$document_identifier])) throw new \Exception(
+      'Multiple document DELETE not permitted'
+    );
   }
 
   private function getData(array $data) {

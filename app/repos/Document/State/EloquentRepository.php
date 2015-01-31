@@ -47,4 +47,11 @@ class EloquentRepository extends DocumentRepository {
   private function checkETag() {
     return; // State API should not check ETags (issues/493).
   }
+
+  protected function validateDestroy(array $data) {
+    if (!isset($data['activityId'])) throw new \Exception(
+      'Missing activityId'
+    );
+    return; // State API should allow multiple deletes.
+  }
 }
