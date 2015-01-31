@@ -115,8 +115,12 @@ abstract class EloquentRepository implements Repository {
   }
 
   private function getData(array $data) {
-    return array_merge(static::$data_props, $data);
+    $data = array_merge(static::$data_props, $data);
+    $this->validateData($data);
+    return $data;
   }
+
+  abstract protected function validateData(array $data);
 
   private function checkETag($sha, $ifMatch, $ifNoneMatch) {
     $ifMatch = isset($ifMatch) ? '"'.strtoupper($ifMatch).'"' : null;
@@ -139,14 +143,14 @@ abstract class EloquentRepository implements Repository {
     return $document;
   }
 
-  private function whereSince(Builder $query, $since) {
+  protected function whereSince(Builder $query, $since) {
     if (empty($since)) return $query;
 
     $since_carbon = new Carbon($since);
     return $query->where('timestamp', '>', $since_carbon);
   }
 
-  private function whereAgent(Builder $query, array $agent) {
+  protected function whereAgent(Builder $query, array $agent) {
     if (empty($agent)) return $query;
 
     $identifier = Helpers::getAgentIdentifier((object) $agent);
@@ -167,7 +171,7 @@ abstract class EloquentRepository implements Repository {
     return $query;
   }
 
-  private function whereRegistration(Builder $query, $registration) {
+  protected function whereRegistration(Builder $query, $registration) {
     if (empty($registration)) return $query;
     return $query->where('registration', $registration);
   }
