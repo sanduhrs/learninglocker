@@ -6,6 +6,7 @@ use \Input as Input;
 use \Controllers\XAPI\BaseController as XAPIController;
 use \Carbon\Carbon as Carbon;
 use \Helpers\Helpers as Helpers;
+use \Helpers\Exceptions\Precondition as PreconditionException;
 use \Locker\XApi\Timestamp as XAPITimestamp;
 use \Models\Authority as Authority;
 
@@ -99,7 +100,11 @@ abstract class BaseController extends XAPIController {
     $data['updated'] = $this->getUpdatedHeader();
 
     // Stores the document.
-    $document = $repository_handler($this->getAuthority(), $data);
+    try {
+      $document = $repository_handler($this->getAuthority(), $data);
+    } catch (PreconditionException $ex) {
+      return IlluminateResponse::make('', 412, $this->getCORSHeaders());
+    }
 
     if ($document !== null) {
       return IlluminateResponse::json(null, 200, array_merge($this->getCORSHeaders(), [
