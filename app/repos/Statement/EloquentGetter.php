@@ -240,6 +240,9 @@ class EloquentGetter implements GetterInterface {
     Helpers::validateAtom(new \Locker\XApi\Boolean($options['related_agents']));
     Helpers::validateAtom(new \Locker\XApi\Boolean($options['related_activities']));
     Helpers::validateAtom(new \Locker\XApi\Boolean($options['attachments']));
+    Helpers::validateAtom(new \Locker\XApi\Boolean($options['active']));
+    Helpers::validateAtom(new \Locker\XApi\Boolean($options['voided']));
+    Helpers::validateAtom(new \Locker\XApi\Boolean($options['ascending']));
   }
 
   private function getIndexOptions(array $given_options) {
