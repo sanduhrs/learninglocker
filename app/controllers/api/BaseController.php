@@ -21,7 +21,11 @@ abstract class BaseController extends IlluminateController {
       'Authorization details should be Base 64.'
     );
 
-    return (new AuthorityRepository)->showFromBasicAuth($user, $pass);
+    try {
+      return (new AuthorityRepository)->showFromBasicAuth($user, $pass);
+    } catch (\Exception $ex) {
+      throw new NoAuthException();
+    }
   }
 
   private function isBase64($value) {

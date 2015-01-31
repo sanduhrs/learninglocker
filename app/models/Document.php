@@ -107,9 +107,9 @@ class Document extends Eloquent {
    * Handle content storage
    * @param Mixed $content          The content passed in the request
    */
-  public function setContent( $content_info, $method){
-    $content      = $content_info['content'];
-    $contentType  = $content_info['contentType'];
+  public function setContent($content_info, $method) {
+    $content = $content_info['content'];
+    $contentType = $content_info['contentType'];
 
     $contentTypeArr = explode(";", $contentType);
     if( sizeof($contentTypeArr) >= 1 ){
