@@ -258,7 +258,8 @@ class EloquentGetter implements GetterInterface {
       'format' => 'exact',
       'offset' => 0,
       'limit' => self::DEFAULT_LIMIT,
-      'langs' => []
+      'langs' => [],
+      'attachments' => false
     ]);
   }
 

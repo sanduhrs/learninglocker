@@ -62,6 +62,7 @@ abstract class EloquentRepository implements Repository {
   public function store(Authority $authority, array $data, callable $validator = null) {
     // Gets document and data.
     $data = $this->getData($data);
+    \log::info($data);
     $existing_document = $this->show($authority, $data);
 
     if ($validator !== null) $validator($existing_document);
@@ -77,7 +78,7 @@ abstract class EloquentRepository implements Repository {
     }
 
     // Saves document.
-    $updated = isset($data['Updated']) ? $data['Updated'] : Carbon::now()->toISO8601String();
+    $updated = isset($data['updated']) ? $data['updated'] : Carbon::now()->toISO8601String();
     $document->updated_at = new Carbon($updated);
     $document->setContent($data['content_info'], $data['method']);
     $document->save();

@@ -34,7 +34,6 @@ class EloquentRepository extends DocumentRepository {
     $query = $query->where('documentType', static::$document_type);
     $query = $query->where('activityId', $data['activityId']);
     $query = $query->where(static::$document_identifier, $data[static::$document_identifier]);
-    \Log::info($data[static::$document_identifier]);
 
     return $query;
   }

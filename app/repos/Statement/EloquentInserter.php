@@ -60,8 +60,11 @@ class EloquentInserter implements InserterInterface {
     return (new ActivityProfileRepo)->store(
       $authority,
       [
-        'id' => $statement->getPropValue('object.id'),
-        'definition' => $statement->getPropValue('object.definition')
+        'activityId' => $statement->getPropValue('object.id'),
+        'content_info' => [
+          'content' => json_encode($statement->getPropValue('object.definition')),
+          'contentType' => 'application/json'
+        ]
       ]
     );
   }
