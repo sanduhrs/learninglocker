@@ -53,8 +53,7 @@ abstract class EloquentRepository implements Repository {
       $this->checkETag(
         isset($existing_document->sha) ? $existing_document->sha : null,
         $data['ifMatch'],
-        $data['ifNoneMatch'],
-        false
+        $data['ifNoneMatch']
       );
     });
   }
@@ -62,7 +61,6 @@ abstract class EloquentRepository implements Repository {
   public function store(Authority $authority, array $data, callable $validator = null) {
     // Gets document and data.
     $data = $this->getData($data);
-    \log::info($data);
     $existing_document = $this->show($authority, $data);
 
     if ($validator !== null) $validator($existing_document);
@@ -113,14 +111,17 @@ abstract class EloquentRepository implements Repository {
     return array_merge(static::$data_props, $data);
   }
 
-  private function checkETag($sha, $ifMatch, $ifNoneMatch, $noConflict = true) {
+  private function checkETag($sha, $ifMatch, $ifNoneMatch) {
     $ifMatch = isset($ifMatch) ? '"'.strtoupper($ifMatch).'"' : null;
+
     if (isset($ifMatch) && $ifMatch !== $sha) {
       throw new PreconditionException('Precondition (If-Match) failed.');
     } else if (isset($ifNoneMatch) && isset($sha) && $ifNoneMatch === '*') {
       throw new PreconditionException('Precondition (If-None-Match) failed.');
-    } else if ($noConflict && $sha !== null && !isset($ifNoneMatch) && !isset($ifMatch)) {
-      throw new ConflictException('Check the current state of the resource then set the "If-Match" header with the current ETag to resolve the conflict.');
+    } else if ($sha !== null && !isset($ifNoneMatch) && !isset($ifMatch)) {
+      throw new ConflictException(
+        'Check the current state of the resource then set the "If-Match" header with the current ETag to resolve the conflict.'
+      );
     }
   }
 

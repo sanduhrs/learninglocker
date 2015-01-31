@@ -7,6 +7,7 @@ use \Controllers\XAPI\BaseController as XAPIController;
 use \Carbon\Carbon as Carbon;
 use \Helpers\Helpers as Helpers;
 use \Helpers\Exceptions\Precondition as PreconditionException;
+use \Helpers\Exceptions\Conflict as ConflictException;
 use \Locker\XApi\Timestamp as XAPITimestamp;
 use \Models\Authority as Authority;
 
@@ -103,7 +104,15 @@ abstract class BaseController extends XAPIController {
     try {
       $document = $repository_handler($this->getAuthority(), $data);
     } catch (PreconditionException $ex) {
-      return IlluminateResponse::make('', 412, $this->getCORSHeaders());
+      return IlluminateResponse::json([
+        'message' => $ex->getMessage(),
+        'trace' => $ex->getTrace()
+      ], 412, $this->getCORSHeaders());
+    } catch (ConflictException $ex) {
+      return IlluminateResponse::json([
+        'message' => $ex->getMessage(),
+        'trace' => $ex->getTrace()
+      ], 409, $this->getCORSHeaders());
     }
 
     if ($document !== null) {
