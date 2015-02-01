@@ -30,7 +30,7 @@ class Helpers {
   static function makeUUID(){
     $remote_addr = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'LL';
     mt_srand(crc32(serialize([microtime(true), $remote_addr, 'ETC'])));
-    
+
     return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
       mt_rand(0, 0xffff), mt_rand(0, 0xffff),
       mt_rand(0, 0xffff),
@@ -56,5 +56,17 @@ class Helpers {
     if (count($errors) > 0) throw new \Exception(json_encode(array_map(function (XAPIError $error) {
       return (string) $error;
     }, $errors)));
+  }
+
+  static function replaceDots($value) {
+    return json_decode(
+      str_replace('.', '&46;', json_encode($value))
+    );
+  }
+
+  static function replaceHTMLDots($value) {
+    return json_decode(
+      str_replace('&46;', '.', json_encode($value))
+    );
   }
 }

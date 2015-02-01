@@ -3,6 +3,7 @@
 use \Models\Authority as Authority;
 use \Locker\XApi\Statement as XAPIStatement;
 use \MongoDate as MongoDate;
+use \Helpers\Helpers as Helpers;
 use \Helpers\Exceptions\Conflict as ConflictException;
 use \Repos\Document\ActivityProfile\EloquentRepository as ActivityProfileRepo;
 
@@ -30,13 +31,13 @@ class EloquentInserter implements InserterInterface {
 
     if ($duplicate === null) return;
 
-    $duplicate = XAPIStatement::createFromJson(json_encode($duplicate));
+    $duplicate = XAPIStatement::createFromJson(json_encode($duplicate->statement));
     $this->checkMatch($statement, $duplicate);
   }
 
   private function checkMatch(XAPIStatement $statement, XAPIStatement $matcher) {
-    $new_statement = json_decode($new_statement_obj->toJson(), true);
-    $old_statement = json_decode($old_statement_obj->toJson(), true);
+    $new_statement = json_decode($statement->toJson(), true);
+    $old_statement = json_decode($matcher->toJson(), true);
     array_multisort($new_statement);
     array_multisort($old_statement);
     ksort($new_statement);
@@ -46,10 +47,10 @@ class EloquentInserter implements InserterInterface {
     unset($new_statement['authority']);
     unset($old_statement['authority']);
     if ($new_statement !== $old_statement) {
-      $new_statement = $new_statement_obj->toJson();
-      $old_statement = $old_statement_obj->toJson();
+      $new_statement = $statement->toJson();
+      $old_statement = $matcher->toJson();
       throw new ConflictException(
-        "Conflicts\r\n`$new_statement`\r\n`$old_statement`."
+        "Conflicts\r\n`".$statement->toJson()."`\r\n`".$matcher->toJson()."`."
       );
     };
   }
@@ -74,7 +75,7 @@ class EloquentInserter implements InserterInterface {
       'lrs' => [
         '_id' => $authority->getLRS(),
       ],
-      'statement' => $statement->getValue(),
+      'statement' => Helpers::replaceDots($statement->getValue()),
       'active' => false,
       'voided' => false,
       'timestamp' => new MongoDate(strtotime($statement->getPropValue('timestamp')))

@@ -80,9 +80,12 @@ abstract class BaseController extends XAPIController {
    * @return Response
    */
   public function store() {
-    return $this->insert('POST', function (Authority $authority, array $data) {
+    $document = $this->insert('POST', function (Authority $authority, array $data) {
       return (new static::$document_repo)->store($authority, $data);
     });
+    return IlluminateResponse::json(null, 200, array_merge($this->getCORSHeaders(), [
+      'ETag' => $document->sha
+    ]));
   }
 
   /**
@@ -90,9 +93,12 @@ abstract class BaseController extends XAPIController {
    * @return Response
    */
   public function update() {
-    return $this->insert('PUT', function (Authority $authority, array $data) {
+    $document = $this->insert('PUT', function (Authority $authority, array $data) {
       return (new static::$document_repo)->update($authority, $data);
     });
+    return IlluminateResponse::make('', 204, array_merge($this->getCORSHeaders(), [
+      'ETag' => $document->sha
+    ]));
   }
 
   private function insert($method, callable $repository_handler) {
@@ -118,9 +124,7 @@ abstract class BaseController extends XAPIController {
     }
 
     if ($document !== null) {
-      return IlluminateResponse::json(null, 200, array_merge($this->getCORSHeaders(), [
-        'ETag' => $document->sha
-      ]));
+      return $document;
     } else {
       throw new \Exception('Could not store Document.');
     }

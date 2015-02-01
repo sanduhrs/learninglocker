@@ -7,6 +7,7 @@
 use \Jenssegers\Mongodb\Model as Eloquent;
 use \Symfony\Component\HttpFoundation\File\UploadedFile;
 use \Repos\Document\Files as DocumentFiles;
+use \Helpers\Helpers as Helpers;
 
 class Document extends Eloquent {
   protected $collection = 'documentapi';
@@ -108,7 +109,7 @@ class Document extends Eloquent {
    * @param Mixed $content          The content passed in the request
    */
   public function setContent($content_info, $method) {
-    $content = $content_info['content'];
+    $content = Helpers::replaceDots($content_info['content']);
     $contentType = $content_info['contentType'];
 
     $contentTypeArr = explode(";", $contentType);

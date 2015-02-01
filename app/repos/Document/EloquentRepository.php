@@ -29,7 +29,7 @@ abstract class EloquentRepository implements Repository {
   }
 
   public function index(Authority $authority, array $data) {
-    return $this->indexBuilder($authority, $data)->get()->toArray();
+    return Helpers::replaceHTMLDots($this->indexBuilder($authority, $data)->get()->toArray());
   }
 
   protected function indexBuilder(Authority $authority, array $data) {
@@ -38,7 +38,7 @@ abstract class EloquentRepository implements Repository {
   }
 
   public function show(Authority $authority, array $data) {
-    return $this->showBuilder($authority, $data)->first();
+    return Helpers::replaceHTMLDots($this->showBuilder($authority, $data)->first());
   }
 
   protected function showBuilder(Authority $authority, array $data) {
@@ -128,7 +128,8 @@ abstract class EloquentRepository implements Repository {
     if (isset($ifMatch) && $ifMatch !== $sha) {
       throw new PreconditionException('Precondition (If-Match) failed.');
     } else if (isset($ifNoneMatch) && isset($sha) && $ifNoneMatch === '*') {
-      throw new PreconditionException('Precondition (If-None-Match) failed.');
+      throw new PreconditionException('P
+        recondition (If-None-Match) failed.');
     } else if ($sha !== null && !isset($ifNoneMatch) && !isset($ifMatch)) {
       throw new ConflictException(
         'Check the current state of the resource then set the "If-Match" header with the current ETag to resolve the conflict.'

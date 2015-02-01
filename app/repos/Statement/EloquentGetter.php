@@ -49,7 +49,7 @@ class EloquentGetter implements GetterInterface {
       default: throw new \Exception('Invalid format.');
     }
 
-    return [$statements, $count];
+    return [Helpers::replaceHTMLDots($statements), $count];
   }
 
   public function show(Authority $authority, $id, $voided = false, $active = true) {
@@ -62,7 +62,7 @@ class EloquentGetter implements GetterInterface {
 
     if ($statement === null) throw new NotFoundException($id, 'Statement');
 
-    return $statement;
+    return $Helpers::replaceHTMLDots($statement);
   }
 
   public function where(Authority $authority) {
