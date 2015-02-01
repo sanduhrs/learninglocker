@@ -29,7 +29,7 @@ abstract class EloquentRepository implements Repository {
   }
 
   public function index(Authority $authority, array $data) {
-    return $this->indexBuilder($authority, $data)->get();
+    return $this->indexBuilder($authority, $data)->get()->toArray();
   }
 
   protected function indexBuilder(Authority $authority, array $data) {
@@ -61,7 +61,7 @@ abstract class EloquentRepository implements Repository {
   public function store(Authority $authority, array $data, callable $validator = null) {
     // Gets document and data.
     $data = $this->getData($data);
-    $existing_document = $this->show($authority, $data);
+    $existing_document = $this->indexBuilder($authority, $data)->first();
 
     if ($validator !== null) $validator($existing_document);
 

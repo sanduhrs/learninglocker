@@ -33,7 +33,9 @@ abstract class BaseController extends XAPIController {
     );
 
     // Returns array of stateId's.
-    $ids = array_column($documents, static::$document_identifier);
+    $ids = array_map(function ($document) {
+      return $document[static::$document_identifier];
+    }, $documents);
     return IlluminateResponse::json($ids, 200, $this->getCORSHeaders());
   }
 
