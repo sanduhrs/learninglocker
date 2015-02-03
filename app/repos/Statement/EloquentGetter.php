@@ -74,20 +74,21 @@ class EloquentGetter implements GetterInterface {
       '$match' => $this->constructMatchPipeline($options)
     ]];
 
-    // Sorts statements.
-    $order = $options['ascending'] === true ? 1 : -1;
-    $pipeline[] = ['$sort' => ['statement.stored' => $order]];
-
     return $pipeline;
   }
 
   private function projectLimitedStatements(array $pipeline, array $options) {
+    $pipeline[] = ['$group' => $this->groupStatementProps()];
+
     // Limit and offset.
     $pipeline[] = ['$skip' => (int) $options['offset']];
     $pipeline[] = ['$limit' => (int) $options['limit']];
 
+    // Sorts statements.
+    $order = $options['ascending'] === true ? 1 : -1;
+    $pipeline[] = ['$sort' => ['stored' => $order]];
+
     // Outputs statement properties.
-    $pipeline[] = ['$group' => $this->groupStatementProps()];
     $pipeline[] = ['$project' => $this->projectStatementProps()];
 
     return $pipeline;
@@ -236,7 +237,7 @@ class EloquentGetter implements GetterInterface {
 
   private function validateIndexOptions(array $options) {
     if ($options['offset'] < 0) throw new \Exception('`offset` must be a positive interger.');
-    if ($options['limit'] < 0) throw new \Exception('`limit` must be a positive interger.');
+    if ($options['limit'] < 1) throw new \Exception('`limit` must be a positive interger.');
     Helpers::validateAtom(new \Locker\XApi\Boolean($options['related_agents']));
     Helpers::validateAtom(new \Locker\XApi\Boolean($options['related_activities']));
     Helpers::validateAtom(new \Locker\XApi\Boolean($options['attachments']));
@@ -246,7 +247,7 @@ class EloquentGetter implements GetterInterface {
   }
 
   private function getIndexOptions(array $given_options) {
-    return $this->getOptions($given_options, [
+    $options = $this->getOptions($given_options, [
       'agent' => null,
       'activity' => null,
       'verb' => null,
@@ -264,6 +265,8 @@ class EloquentGetter implements GetterInterface {
       'langs' => [],
       'attachments' => false
     ]);
+    if ($options['limit'] === 0) $options['limit'] = self::DEFAULT_LIMIT;
+    return $options;
   }
 
   private function getOptions(array $given_options, array $defaults) {
