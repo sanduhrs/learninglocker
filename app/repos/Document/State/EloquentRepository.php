@@ -58,7 +58,7 @@ class EloquentRepository extends DocumentRepository {
     return; // State API should not check ETags (issues/493).
   }
 
-  protected function validateDestroy() {
+  protected function validateDestroy(array $data) {
     return; // State API should allow multiple deletion.
   }
 
@@ -69,5 +69,11 @@ class EloquentRepository extends DocumentRepository {
     if ($data['registration'] !== null) Helpers::validateAtom(new \Locker\XApi\UUID($data['registration']));
     if ($data['updated'] !== null) Helpers::validateAtom(new \Locker\XApi\Timestamp($data['updated']));
     if ($data['method'] !== null) Helpers::validateAtom(new \Locker\XApi\String($data['method']));
+  }
+
+  protected function getData(array $data) {
+    if ($data['agent'] !== null) $data['agent'] = json_decode($data['agent']);
+    $data = parent::getData($data);
+    return $data;
   }
 }

@@ -6,6 +6,7 @@ use \Controllers\API\BaseController as APIController;
 use \LockerRequest as LockerRequest;
 use \Locker\XApi\Version as XAPIVersion;
 use \Helpers\Exceptions\NoAuth as NoAuthException;
+use \Helpers\Helpers as Helpers;
 
 abstract class BaseController extends APIController {
   abstract protected function get();
@@ -45,10 +46,7 @@ abstract class BaseController extends APIController {
 
   protected function checkVersion() {
     $version = new XAPIVersion(LockerRequest::header('X-Experience-API-Version'));
-    $errors = $version->validate();
-    if (count($errors) > 0) throw new \Exception(
-      'X-Experience-API-Version'
-    );
+    Helpers::validateAtom($version);
   }
 }
 

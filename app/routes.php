@@ -25,10 +25,10 @@ Route::group(['prefix'=>'data/xAPI'], function () {
     'uses' => 'Controllers\XAPI\Document\ActivityProfileController@full'
   ]);
   Route::any('agents/profile', [
-    'uses' => 'Controllers\XAPI\Document\AgentsProfileController@selectMethod'
+    'uses' => 'Controllers\XAPI\Document\AgentProfileController@selectMethod'
   ]);
   Route::get('agents', [
-    'uses' => 'Controllers\XAPI\Document\AgentsProfileController@search'
+    'uses' => 'Controllers\XAPI\Document\AgentProfileController@search'
   ]);
 });
 

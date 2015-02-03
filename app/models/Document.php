@@ -11,22 +11,13 @@ use \Helpers\Helpers as Helpers;
 
 class Document extends Eloquent {
   protected $collection = 'documentapi';
-  protected $hidden = ['_id', 'created_at', 'updated_at', 'lrs', 'apitype'];
-
-  /**
-   * Returns true if $array is associative.
-   * @param Array $array
-   * @return boolean
-   */
-  private function isJSON($array) {
-    return is_array($array) && array_keys($array) !== range(0, count($array) - 1);
-  }
+  protected $hidden = ['_id', 'lrs', 'apitype'];
 
   private function putContent($content, $contentType) {
     switch ($contentType) {
       case 'application/json':
         $this->setSha($this->content);
-        $this->overwriteContent(json_decode($content, true));
+        $this->overwriteContent(json_decode($content));
         break;
       case 'text/plain':
         $this->setSha($content);
@@ -34,24 +25,25 @@ class Document extends Eloquent {
         break;
       default: $this->saveDocument($content, $contentType);
     }
+    $this->contentType = $contentType;
   }
 
   private function postContent($content, $contentType) {
 
     if( $this->exists ){
-      $decoded_content = json_decode($content, true);
+      $decoded_content = json_decode($content);
 
-      //Check existing content type and incoming content type are both application/json
+      // Checks existing content type and incoming content type are both application/json.
       if ($this->contentType !== 'application/json' || $contentType !== 'application/json') {
         throw new \Exception('Both existing content type and incoming content type must be application/json');
       }
 
-      //Check existing content and incoming content are both JSON
-      if (!$this->isJSON($this->content) || !$this->isJSON($decoded_content)) {
+      // Checks existing content and incoming content are both JSON.
+      if (!is_object($this->content) || !is_object($decoded_content)) {
         throw new \Exception('Both existing content and incoming content must be parsable as JSON in order to use POST');
       }
 
-      //Merge JSON
+      // Merges JSON.
       $this->mergeJSONContent($decoded_content, $contentType);
     } else {
       //If document does not already exist, treat as PUT
@@ -64,7 +56,7 @@ class Document extends Eloquent {
   }
 
   private function mergeJSONContent($content, $contentType) {
-    if (!$this->isJSON($content)) {
+    if (!is_object($content)) {
       throw new \Exception(
         'JSON must contain an object at the top level.'
       );
@@ -73,12 +65,12 @@ class Document extends Eloquent {
         'JSON document content may not be merged with that of another type'
       );
     }
-    $this->content = array_merge($this->content, $content);
+    $this->content = Helpers::replaceDots(array_merge((array) $this->content, (array) $content));
     $this->setSha(json_encode($this->content));
   }
 
   private function overwriteContent($content) {
-    $this->content = $content;
+    $this->content = Helpers::replaceDots($content);
   }
 
   private function saveDocument($content, $contentType) {

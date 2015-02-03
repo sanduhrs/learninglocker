@@ -2,6 +2,7 @@
 
 use \Models\Authority as Authority;
 use \Locker\XApi\Statement as XAPIStatement;
+use \Helpers\Helpers as Helpers;
 
 interface LinkerInterface {
   public function link(array $statements, Authority $authority);
@@ -38,17 +39,17 @@ class EloquentLinker implements LinkerInterface {
     $voided_statement = (new EloquentGetter)
       ->where($authority)
       ->where('statement.id', $statement->getPropValue('object.id'))
-      ->first();
+      ->first()->toArray();
 
     if ($voided_statement !== null) {
-      if ($this->isVoidingArray($voided_statement)) throw new \Exception(trans(
+      if ($this->isVoidingArray($voided_statement['statement'])) throw new \Exception(trans(
         'xapi.errors.void_voider'
       ));
 
       (new EloquentGetter)
         ->where($authority)
         ->where('statement.id', $voided_statement['statement']['id'])
-        ->update(['voided' => false]);
+        ->update(['voided' => true]);
     } else {
       throw new \Exception(trans(
         'xapi.errors.void_voider'
@@ -66,13 +67,13 @@ class EloquentLinker implements LinkerInterface {
 
   private function isVoiding(XAPIStatement $statement) {
     return (
-      $statement->getPropValue('verb.id') === 'http://adlnet.gov/expapi/verbs/voided' &&
+      Helpers::replaceHTMLDots($statement->getPropValue('verb.id')) === 'http://adlnet.gov/expapi/verbs/voided' &&
       $this->isReferencing($statement)
     );
   }
 
   private function isReferencing(XAPIStatement $statement) {
-    return $statement->getPropValue('statement.object.objectType') === 'StatementRef';
+    return $statement->getPropValue('object.objectType') === 'StatementRef';
   }
 
   private function addRefBy(XAPIStatement $statement, Authority $authority) {
@@ -92,18 +93,18 @@ class EloquentLinker implements LinkerInterface {
     return $model;
   }
 
-  private function getReferredStatement(array $statement) {
+  private function getReferredStatement(array $statement, Authority $authority) {
     return (new EloquentGetter)
       ->where($authority)
       ->where('statement.id', $statement['statement']['object']['id'])
-      ->first();
+      ->first()->toArray();
   }
 
   private function updateLinks(array $statement, Authority $authority, array $refs = null) {
     $statement_copy = $statement;
 
     if ($refs === null && $this->isReferencingArray($statement['statement'])) {
-      $refs = $this->updateLinks($this->getReferredStatement($statement), $authority);
+      $refs = $this->updateLinks($this->getReferredStatement($statement, $authority), $authority);
     }
 
     // Updates stored refs.
@@ -117,7 +118,7 @@ class EloquentLinker implements LinkerInterface {
     // Updates referrers refs.
     array_map(function ($ref) {
       $this->updateLinks($ref, $authority, $refs);
-    }, $statement['refBy']);
+    }, isset($statement['refBy']) ? $statement['refBy'] : []);
 
     // Removes statement from to_update.
     $updated_index = array_search($statement_copy, $this->to_update);

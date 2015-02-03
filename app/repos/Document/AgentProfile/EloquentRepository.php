@@ -58,4 +58,10 @@ class EloquentRepository extends DocumentRepository {
     if ($data['updated'] !== null) Helpers::validateAtom(new \Locker\XApi\Timestamp($data['updated']));
     if ($data['method'] !== null) Helpers::validateAtom(new \Locker\XApi\String($data['method']));
   }
+
+  protected function getData(array $data) {
+    if ($data['agent'] !== null) $data['agent'] = json_decode($data['agent']);
+    $data = parent::getData($data);
+    return $data;
+  }
 }

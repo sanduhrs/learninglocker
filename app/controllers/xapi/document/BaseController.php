@@ -34,7 +34,7 @@ abstract class BaseController extends XAPIController {
 
     // Returns array of stateId's.
     $ids = array_map(function ($document) {
-      return $document[static::$document_identifier];
+      return $document->{static::$document_identifier};
     }, $documents);
     return IlluminateResponse::json($ids, 200, $this->getCORSHeaders());
   }
@@ -80,12 +80,12 @@ abstract class BaseController extends XAPIController {
    * @return Response
    */
   public function store() {
-    $document = $this->insert('POST', function (Authority $authority, array $data) {
-      return (new static::$document_repo)->store($authority, $data);
+    return $this->insert('POST', function (Authority $authority, array $data) {
+      $document = (new static::$document_repo)->store($authority, $data);
+      return IlluminateResponse::make('', 204, array_merge($this->getCORSHeaders(), [
+        'ETag' => $document->sha
+      ]));
     });
-    return IlluminateResponse::json(null, 200, array_merge($this->getCORSHeaders(), [
-      'ETag' => $document->sha
-    ]));
   }
 
   /**
@@ -93,12 +93,12 @@ abstract class BaseController extends XAPIController {
    * @return Response
    */
   public function update() {
-    $document = $this->insert('PUT', function (Authority $authority, array $data) {
-      return (new static::$document_repo)->update($authority, $data);
+    return $this->insert('PUT', function (Authority $authority, array $data) {
+      $document = (new static::$document_repo)->update($authority, $data);
+      return IlluminateResponse::make('', 204, array_merge($this->getCORSHeaders(), [
+        'ETag' => $document->sha
+      ]));
     });
-    return IlluminateResponse::make('', 204, array_merge($this->getCORSHeaders(), [
-      'ETag' => $document->sha
-    ]));
   }
 
   private function insert($method, callable $repository_handler) {
@@ -110,7 +110,7 @@ abstract class BaseController extends XAPIController {
 
     // Stores the document.
     try {
-      $document = $repository_handler($this->getAuthority(), $data);
+      return $repository_handler($this->getAuthority(), $data);
     } catch (PreconditionException $ex) {
       return IlluminateResponse::json([
         'message' => $ex->getMessage(),
@@ -121,12 +121,6 @@ abstract class BaseController extends XAPIController {
         'message' => $ex->getMessage(),
         'trace' => $ex->getTrace()
       ], 409, $this->getCORSHeaders());
-    }
-
-    if ($document !== null) {
-      return $document;
-    } else {
-      throw new \Exception('Could not store Document.');
     }
   }
 
@@ -179,7 +173,6 @@ abstract class BaseController extends XAPIController {
       if (!$contentType || $isForm) {
         $contentType = is_object(json_decode($content)) ? 'application/json' : 'text/plain';
       }
-
     } else {
       throw new \Exception(sprintf('`%s` was not sent in this request', $name));
     }

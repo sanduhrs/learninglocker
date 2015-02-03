@@ -62,7 +62,7 @@ class EloquentGetter implements GetterInterface {
 
     if ($statement === null) throw new NotFoundException($id, 'Statement');
 
-    return $Helpers::replaceHTMLDots($statement);
+    return Helpers::replaceHTMLDots($statement);
   }
 
   public function where(Authority $authority) {
@@ -162,7 +162,7 @@ class EloquentGetter implements GetterInterface {
       },
       'until' => function ($until) {
         Helpers::validateAtom(new \Locker\XApi\Timestamp($until));
-        return ['statement.stored' => ['$lt' => $until]];
+        return ['statement.stored' => ['$lte' => $until]];
       },
       'active' => function ($active) {
         Helpers::validateAtom(new \Locker\XApi\Boolean($active));

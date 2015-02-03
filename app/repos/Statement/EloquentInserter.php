@@ -56,14 +56,17 @@ class EloquentInserter implements InserterInterface {
   }
 
   private function storeActivityProfile(XAPIStatement $statement, Authority $authority) {
-    if ($statement->getPropValue('object.definition') === null) return;
+    $definition = $statement->getPropValue('object.definition');
+    if (gettype($definition) !== 'object') return;
+    if (count(array_keys((array) $definition)) < 1) return;
 
     return (new ActivityProfileRepo)->store(
       $authority,
       [
         'activityId' => $statement->getPropValue('object.id'),
+        'profileId' => $authority->getLRS(),
         'content_info' => [
-          'content' => json_encode($statement->getPropValue('object.definition')),
+          'content' => json_encode($definition),
           'contentType' => 'application/json'
         ]
       ]

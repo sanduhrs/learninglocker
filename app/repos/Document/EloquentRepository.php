@@ -6,6 +6,7 @@ use \Models\Document as Document;
 use \Carbon\Carbon as Carbon;
 use \Helpers\Exceptions\Precondition as PreconditionException;
 use \Helpers\Exceptions\Conflict as ConflictException;
+use \Helpers\Helpers as Helpers;
 
 interface Repository {
   public function index(Authority $authority, array $data);
@@ -38,7 +39,11 @@ abstract class EloquentRepository implements Repository {
   }
 
   public function show(Authority $authority, array $data) {
-    return Helpers::replaceHTMLDots($this->showBuilder($authority, $data)->first());
+    $document = $this->showBuilder($authority, $data)->first();
+    if ($document !== null) {
+      $document->content = Helpers::replaceHTMLDots($document->content);
+    }
+    return $document;
   }
 
   protected function showBuilder(Authority $authority, array $data) {
@@ -47,9 +52,8 @@ abstract class EloquentRepository implements Repository {
   }
 
   public function update(Authority $authority, array $data) {
-    $data = $this->getData($data);
     $data['method'] = 'PUT';
-    return $this->store($authority, $data, function ($existing_document) use ($data) {
+    return $this->store($authority, $data, function ($existing_document, $data) {
       $this->checkETag(
         isset($existing_document->sha) ? $existing_document->sha : null,
         $data['ifMatch'],
@@ -60,10 +64,8 @@ abstract class EloquentRepository implements Repository {
 
   public function store(Authority $authority, array $data, callable $validator = null) {
     // Gets document and data.
+    $existing_document = $this->show($authority, $data);
     $data = $this->getData($data);
-    $existing_document = $this->indexBuilder($authority, $data)->first();
-
-    if ($validator !== null) $validator($existing_document);
 
     // Updates document.
     if ($existing_document === null) {
@@ -72,6 +74,7 @@ abstract class EloquentRepository implements Repository {
       $document->documentType = static::$document_type;
       $document = $this->setActivityProviderProps($document, $data);
     } else {
+      if ($validator !== null) $validator($existing_document, $data);
       $document = $existing_document;
     }
 
@@ -114,7 +117,7 @@ abstract class EloquentRepository implements Repository {
     );
   }
 
-  private function getData(array $data) {
+  protected function getData(array $data) {
     $data = array_merge(static::$data_props, $data);
     $this->validateData($data);
     return $data;
@@ -128,9 +131,8 @@ abstract class EloquentRepository implements Repository {
     if (isset($ifMatch) && $ifMatch !== $sha) {
       throw new PreconditionException('Precondition (If-Match) failed.');
     } else if (isset($ifNoneMatch) && isset($sha) && $ifNoneMatch === '*') {
-      throw new PreconditionException('P
-        recondition (If-None-Match) failed.');
-    } else if ($sha !== null && !isset($ifNoneMatch) && !isset($ifMatch)) {
+      throw new PreconditionException('Precondition (If-None-Match) failed.');
+    } else if (isset($sha) && !isset($ifNoneMatch) && !isset($ifMatch)) {
       throw new ConflictException(
         'Check the current state of the resource then set the "If-Match" header with the current ETag to resolve the conflict.'
       );
@@ -151,20 +153,20 @@ abstract class EloquentRepository implements Repository {
     return $query->where('timestamp', '>', $since_carbon);
   }
 
-  protected function whereAgent(Builder $query, array $agent) {
+  protected function whereAgent(Builder $query, \stdClass $agent) {
     if (empty($agent)) return $query;
 
-    $identifier = Helpers::getAgentIdentifier((object) $agent);
+    $identifier = Helpers::getAgentIdentifier($agent);
 
     if ($identifier !== null && $identifier !== 'account') {
-      $query->where($identifier, $agent[$identifier]);
+      $query->where('agent.'.$identifier, $agent->{$identifier});
     } else if ($identifier === 'account') {
-      if (!isset($agent['account']['homePage']) || !isset($agent['account']['name'])) {
+      if (!isset($agent->account->homePage) || !isset($agent->account->name)) {
         throw new \Exception('Missing required paramaters in the agent.account');
       }
 
-      $query->where('agent.account.homePage', $agent['account']['homePage']);
-      $query->where('agent.account.name', $agent['account']['name']);
+      $query->where('agent.account.homePage', $agent->account->homePage);
+      $query->where('agent.account.name', $agent->account->name);
     } else {
       throw new \Exception('Missing required paramaters in the agent');
     }
