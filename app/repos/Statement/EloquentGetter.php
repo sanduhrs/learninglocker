@@ -275,7 +275,7 @@ class EloquentGetter implements GetterInterface {
     $options['limit'] = $this->convertToInt($options['limit']);
     $options['offset'] = $this->convertToInt($options['offset']);
 
-    if ($options['limit'] == 0) $options['limit'] = self::DEFAULT_LIMIT;
+    if ($options['limit'] === 0) $options['limit'] = self::DEFAULT_LIMIT;
     return $options;
   }
 
