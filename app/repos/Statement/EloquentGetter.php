@@ -16,18 +16,33 @@ interface GetterInterface {
 class EloquentGetter implements GetterInterface {
   const DEFAULT_LIMIT = 100;
 
+  /**
+   * Aggregates statements using the given pipeline and authority.
+   * @param Authority $authority The authority to restrict with.
+   * @param [[String => mixed]] $pipeline Mongo pipeline.
+   * @return [\stdClass]
+   */
   public function aggregate(Authority $authority, array $pipeline) {
     // Stops people using the $out operator.
     if (strpos(json_encode($pipeline), '$out') !== false) return;
 
     // Ensures that you can't get statements from other LRSs.
+    $homePage = Helpers::replaceDots($authority->homePage);
     $pipeline[0] = array_merge_recursive([
-      '$match' => ['lrs._id' => $authority->getLRS()]
+      '$match' => [
+        'statement.authority.account.homePage' => new MongoRegex("/^$homePage/")
+      ]
     ], $pipeline[0]);
 
     return Mongo::getMongoDB()->statements->aggregate($pipeline);
   }
 
+  /**
+   * Gets all of the statements that fulfil the given options.
+   * @param Authority $authority The authority to restrict with.
+   * @param [String => mixed] $options Index options.
+   * @return [[\stdClass], Integer] Contains the statements and the number of statements fulfilling the filtering options.
+   */
   public function index(Authority $authority, array $options) {
     // Gets and validates options.
     $options = $this->getIndexOptions($options);
@@ -52,6 +67,14 @@ class EloquentGetter implements GetterInterface {
     return [Helpers::replaceHTMLDots($statements), $count];
   }
 
+  /**
+   * Gets a single statement that has the given ID.
+   * @param Authority $authority The authority to restrict with.
+   * @param String $id ID of the statement to be found.
+   * @param Boolean $voided Determines if the statement has been voided.
+   * @param Boolean $active Determines if the statement has been activated.
+   * @return \stdClass
+   */
   public function show(Authority $authority, $id, $voided = false, $active = true) {
     $statement = $this
       ->where($authority)
@@ -65,10 +88,24 @@ class EloquentGetter implements GetterInterface {
     return Helpers::replaceHTMLDots($statement);
   }
 
+  /**
+   * Constructs a query restricted by the given authority.
+   * @param Authority $authority The authority to restrict with.
+   * @return \Jenssegers\Mongodb\Eloquent\Builder
+   */
   public function where(Authority $authority) {
-    return Statement::where('lrs._id', $authority->getLRS());
+    return Statement::where(
+      'statement.authority.account.homePage',
+      'like',
+      $authority->homePage.'%'
+    );
   }
 
+  /**
+   * Extends a Mongo pipeline with a Mongo pipeline from the given options.
+   * @param [String => mixed] $options Index options.
+   * @return [[String => mixed]] $pipeline Mongo pipeline.
+   */
   private function constructIndexPipeline(array $options) {
     $pipeline = [[
       '$match' => $this->constructMatchPipeline($options)
@@ -77,6 +114,12 @@ class EloquentGetter implements GetterInterface {
     return $pipeline;
   }
 
+  /**
+   * Extends a Mongo pipeline with a Mongo projection from the given options to get a limited number of statements.
+   * @param [[String => mixed]] $pipeline Mongo pipeline.
+   * @param [String => mixed] $options Index options.
+   * @return [[String => mixed]] $pipeline Mongo pipeline.
+   */
   private function projectLimitedStatements(array $pipeline, array $options) {
     $pipeline[] = ['$group' => $this->groupStatementProps()];
 
@@ -94,6 +137,11 @@ class EloquentGetter implements GetterInterface {
     return $pipeline;
   }
 
+  /**
+   * Constructs a Mongo projection to get a count of statements.
+   * @param [[String => mixed]] $pipeline Mongo pipeline.
+   * @return [[String => mixed]] $pipeline Mongo pipeline.
+   */
   private function projectCountedStatements(array $pipeline) {
     $pipeline[] = ['$group' => [
       '_id' => '$lrs._id',
@@ -107,6 +155,10 @@ class EloquentGetter implements GetterInterface {
     return $pipeline;
   }
 
+  /**
+   * Constructs a Mongo grouping to get the properties of statements.
+   * @return [String => mixed]
+   */
   private function groupStatementProps() {
     return [
       '_id' => '$statement.id',
@@ -123,6 +175,10 @@ class EloquentGetter implements GetterInterface {
     ];
   }
 
+  /**
+   * Constructs a Mongo projection to get the properties of statements.
+   * @return [String => mixed]
+   */
   private function projectStatementProps() {
     return [
       '_id' => 0,
@@ -139,6 +195,11 @@ class EloquentGetter implements GetterInterface {
     ];
   }
 
+  /**
+   * Constructs a Mongo pipeline from the given options.
+   * @param [String => mixed] $options Index options.
+   * @return [[String => mixed]] $pipeline Mongo pipeline.
+   */
   private function constructMatchPipeline(array $options) {
     return $this->addMatchOptions([], $options, [
       'agent' => function ($agent, array $options) {
@@ -176,19 +237,40 @@ class EloquentGetter implements GetterInterface {
     ]);
   }
 
+  /**
+   * Extends a given Mongo match using the given options and matchers.
+   * @param [String => mixed] $match Mongo match to be extended.
+   * @param [String => mixed] $options Index options.
+   * @param [Callable] $matchers
+   * @return [String => mixed]
+   */
   private function addMatchOptions(array $match, array $options, array $matchers) {
-    $match = [];
+    $match = $match ?: [];
     foreach ($matchers as $option => $matcher) {
       $match = $this->addMatch($match, $options, $option, $matcher);
     }
     return $match;
   }
 
+  /**
+   * Extends a given Mongo match using the given options, option, and matcher.
+   * @param [String => mixed] $match Mongo match to be extended.
+   * @param [String => mixed] $options Index options.
+   * @param String $option Option to be given to the matcher.
+   * @param Callable $matcher
+   * @return [String => mixed]
+   */
   private function addMatch(array $match, array $options, $option, callable $matcher) {
     if (!isset($options[$option]) || $options[$option] === null) return $match;
     return array_merge_recursive($match, $matcher($options[$option], $options));
   }
 
+  /**
+   * Constructs a Mongo match using the given agent and options.
+   * @param String $agent Agent to be matched.
+   * @param [String => mixed] $options Index options.
+   * @return [String => mixed]
+   */
   private function matchAgent($agent, array $options) {
     $agent = json_decode($agent);
     if (gettype($agent) !== 'object') throw new \Exception('Invalid agent');
@@ -206,6 +288,12 @@ class EloquentGetter implements GetterInterface {
     ]);
   }
 
+  /**
+   * Constructs a Mongo match using the given activity and options.
+   * @param String $activity Activity to be matched.
+   * @param [String => mixed] $options Index options.
+   * @return [String => mixed]
+   */
   private function matchActivity($activity, array $options) {
     return $this->matchOption($activity, $options['related_activities'], [
       'statement.object.id'
@@ -217,6 +305,13 @@ class EloquentGetter implements GetterInterface {
     ]);
   }
 
+  /**
+   * Constructs a Mongo match for the given value using the given option and fields (less and more) to be matched.
+   * @param mixed $value
+   * @param mixed $option
+   * @return [String] $less Fields to be matched regardless of the given option.
+   * @return [String] $less Fields to be matched additionally if the given option is `true`.
+   */
   private function matchOption($value, $option, array $less, array $more) {
     $or = [];
 
@@ -235,6 +330,10 @@ class EloquentGetter implements GetterInterface {
     ];
   }
 
+  /**
+   * Validates the given options as index options.
+   * @param [String => mixed] $options Index options.
+   */
   private function validateIndexOptions(array $options) {
     if ($options['offset'] < 0) throw new \Exception('`offset` must be a positive interger.');
     if ($options['limit'] < 1) throw new \Exception('`limit` must be a positive interger.');
@@ -244,6 +343,11 @@ class EloquentGetter implements GetterInterface {
     Helpers::validateAtom(new \Locker\XApi\Boolean($options['ascending']), 'ascending');
   }
 
+  /**
+   * Returns all of the index options set to their default or given value (using the given options).
+   * @param [String => mixed] $given_options Index options.
+   * @return [String => mixed]
+   */
   private function getIndexOptions(array $given_options) {
     // Merges with defaults.
     $options = $this->getOptions($given_options, [
@@ -279,6 +383,11 @@ class EloquentGetter implements GetterInterface {
     return $options;
   }
 
+  /**
+   * Converts the given value to a Boolean if it can be.
+   * @param mixed $value
+   * @return Boolean|mixed Returns the value unchanged if it can't be converted.
+   */
   private function convertToBoolean($value) {
     if (gettype($value) === 'string') $value = strtolower($value);
     if ($value === 'true') return true;
@@ -286,11 +395,22 @@ class EloquentGetter implements GetterInterface {
     return $value;
   }
 
+  /**
+   * Converts the given value to a Integer if it can be.
+   * @param mixed $value
+   * @return Integer|mixed Returns the value unchanged if it can't be converted.
+   */
   private function convertToInt($value) {
     $converted_value = (int) $value;
     return ($value !== (string) $converted_value) ? $value : $converted_value;
   }
 
+  /**
+   * Returns all of the options set to their default (using given defaults) or given value (using the given options).
+   * @param [String => mixed] $given_options Index options.
+   * @param [String => mixed] $defaults Index options defaults.
+   * @return [String => mixed]
+   */
   private function getOptions(array $given_options, array $defaults) {
     $options = [];
 
@@ -301,6 +421,13 @@ class EloquentGetter implements GetterInterface {
     return $options;
   }
 
+  /**
+   * Returns the value associated with the key from the given options or the given default.
+   * @param [String => mixed] $given_options Index options.
+   * @param String $key Name of the option to be returned.
+   * @param mixed $default Default value for the option.
+   * @return mixed
+   */
   private function getOption(array $given_options, $key, $default) {
     return (
       isset($given_options[$key]) && $given_options[$key] !== null ?

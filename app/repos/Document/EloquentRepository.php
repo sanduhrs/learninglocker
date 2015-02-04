@@ -25,19 +25,46 @@ abstract class EloquentRepository implements Repository {
   abstract protected function constructIndexQuery(Builder $query, array $data);
   abstract protected function constructShowQuery(Builder $query, array $data);
 
+  /**
+   * Constructs a query of the documents restricted by the given authority.
+   * @param Authority $authority Authority to restrict with.
+   * @return Builder
+   */
   protected function where(Authority $authority) {
-    return Document::where('lrs', $authority->getLRS());
+    return Document::where(
+      'authority.homePage',
+      'like',
+      $authority->homePage.'%'
+    );
   }
 
+  /**
+   * Gets multiple documents using the given data.
+   * @param Authority $authority Authority to restrict with.
+   * @param AssocArray $data Data from the request.
+   * @return [Document]
+   */
   public function index(Authority $authority, array $data) {
     return Helpers::replaceHTMLDots($this->indexBuilder($authority, $data)->get()->toArray());
   }
 
+  /**
+   * Builds a query to get multiple documents using the given data.
+   * @param Authority $authority Authority to restrict with.
+   * @param AssocArray $data Data from the request.
+   * @return Builder
+   */
   protected function indexBuilder(Authority $authority, array $data) {
     $data = $this->getData($data);
     return $this->constructIndexQuery($this->where($authority), $data);
   }
 
+  /**
+   * Gets a single document using the given data.
+   * @param Authority $authority Authority to restrict with.
+   * @param AssocArray $data Data from the request.
+   * @return Document
+   */
   public function show(Authority $authority, array $data) {
     $document = $this->showBuilder($authority, $data)->first();
     if ($document !== null) {
@@ -46,11 +73,23 @@ abstract class EloquentRepository implements Repository {
     return $document;
   }
 
+  /**
+   * Builds a query to get a single document using the given data.
+   * @param Authority $authority Authority to restrict with.
+   * @param AssocArray $data Data from the request.
+   * @return Builder
+   */
   protected function showBuilder(Authority $authority, array $data) {
     $data = $this->getData($data);
     return $this->constructShowQuery($this->where($authority), $data);
   }
 
+  /**
+   * Updates (PUTs) a document using the given data.
+   * @param Authority $authority Authority to restrict with.
+   * @param AssocArray $data Data from the request.
+   * @return Document
+   */
   public function update(Authority $authority, array $data) {
     $data['method'] = 'PUT';
     return $this->store($authority, $data, function ($existing_document, $data) {
@@ -62,7 +101,14 @@ abstract class EloquentRepository implements Repository {
     });
   }
 
-  public function store(Authority $authority, array $data, callable $validator = null) {
+  /**
+   * Stores (POSTs) a document using the given data.
+   * @param Authority $authority Authority to restrict with.
+   * @param AssocArray $data Data from the request.
+   * @param Callable|null $validator A function to validate the existing document and data with.
+   * @return Document
+   */
+  public function store(Authority $authority, array $data, Callable $validator = null) {
     // Gets document and data.
     $existing_document = $this->show($authority, $data);
     $data = $this->getData($data);
@@ -70,7 +116,7 @@ abstract class EloquentRepository implements Repository {
     // Updates document.
     if ($existing_document === null) {
       $document = new Document;
-      $document->lrs = $authority->getLRS();
+      $document->authority = $authority->homePage.$authority->name;
       $document->documentType = static::$document_type;
       $document = $this->setActivityProviderProps($document, $data);
     } else {
@@ -87,6 +133,12 @@ abstract class EloquentRepository implements Repository {
     return $document;
   }
 
+  /**
+   * Destroys the document using the given data.
+   * @param Authority $authority Authority to restrict with.
+   * @param AssocArray $data Data from the request.
+   * @return Boolean
+   */
   public function destroy(Authority $authority, array $data) {
     $this->validateDestroy($data);
     $data['since'] = null;
@@ -111,12 +163,21 @@ abstract class EloquentRepository implements Repository {
     return $result->delete();
   }
 
+  /**
+   * Validates that the document can be destroyed using the given data.
+   * @param AssocArray $data Data from the request.
+   */
   protected function validateDestroy(array $data) {
     if (!isset($data[static::$document_identifier])) throw new \Exception(
-      'Multiple document DELETE not permitted'
+      trans('xapi.errors.multi_delete')
     );
   }
 
+  /**
+   * Gets and validates the data.
+   * @param AssocArray $data Data from the request.
+   * @return AssocArray
+   */
   protected function getData(array $data) {
     $data = array_merge(static::$data_props, $data);
     $this->validateData($data);
@@ -125,6 +186,12 @@ abstract class EloquentRepository implements Repository {
 
   abstract protected function validateData(array $data);
 
+  /**
+   * Checks the ETag.
+   * @param String $sha SHA of the document.
+   * @param String $ifMatch If-Match header.
+   * @param String $ifNoneMatch If-None-Match header.
+   */
   private function checkETag($sha, $ifMatch, $ifNoneMatch) {
     $ifMatch = isset($ifMatch) ? '"'.strtoupper($ifMatch).'"' : null;
 
@@ -134,11 +201,17 @@ abstract class EloquentRepository implements Repository {
       throw new PreconditionException('Precondition (If-None-Match) failed.');
     } else if (isset($sha) && !isset($ifNoneMatch) && !isset($ifMatch)) {
       throw new ConflictException(
-        'Check the current state of the resource then set the "If-Match" header with the current ETag to resolve the conflict.'
+        trans('xapi.errors.check_state')
       );
     }
   }
 
+  /**
+   * Sets the props on the given document that should have been given by the activity provider.
+   * @param Document $document.
+   * @param AssocArray $data Data from the request.
+   * @return Document
+   */
   private function setActivityProviderProps(Document $document, array $data) {
     foreach (static::$ap_props as $prop) {
       $document->{$prop} = $data[$prop];
@@ -146,6 +219,12 @@ abstract class EloquentRepository implements Repository {
     return $document;
   }
 
+  /**
+   * Extends a query to match the given since.
+   * @param Builder $query Query to extend.
+   * @param String $since Since to match.
+   * @return Builder
+   */
   protected function whereSince(Builder $query, $since) {
     if (empty($since)) return $query;
 
@@ -153,6 +232,12 @@ abstract class EloquentRepository implements Repository {
     return $query->where('timestamp', '>', $since_carbon);
   }
 
+  /**
+   * Extends a query to match the given agent.
+   * @param Builder $query Query to extend.
+   * @param String $agent Agent to match.
+   * @return Builder
+   */
   protected function whereAgent(Builder $query, \stdClass $agent) {
     if (empty($agent)) return $query;
 
@@ -162,18 +247,24 @@ abstract class EloquentRepository implements Repository {
       $query->where('agent.'.$identifier, $agent->{$identifier});
     } else if ($identifier === 'account') {
       if (!isset($agent->account->homePage) || !isset($agent->account->name)) {
-        throw new \Exception('Missing required paramaters in the agent.account');
+        throw new \Exception(trans('xapi.errors.missing_account_params'));
       }
 
       $query->where('agent.account.homePage', $agent->account->homePage);
       $query->where('agent.account.name', $agent->account->name);
     } else {
-      throw new \Exception('Missing required paramaters in the agent');
+      throw new \Exception(trans('xapi.errors.missing_agent_params'));
     }
 
     return $query;
   }
 
+  /**
+   * Extends a query to match the given registration.
+   * @param Builder $query Query to extend.
+   * @param String $registration Registration to match.
+   * @return Builder
+   */
   protected function whereRegistration(Builder $query, $registration) {
     if (empty($registration)) return $query;
     return $query->where('registration', $registration);

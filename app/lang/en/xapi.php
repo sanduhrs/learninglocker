@@ -10,6 +10,10 @@ return [
     "required" => "`:field` is required but not set.",
     "void_voider" => "Cannot void a voiding statement",
     "void_existence" => "Cannot a void a statement that does not exist.",
-    "unset_param" => ":field was not sent in this request."
+    "unset_param" => ":field was not sent in this request.",
+    "missing_account_params" => "Missing required paramaters in the agent.account",
+    "missing_agent" => "Missing required paramaters in the agent",
+    "check_state" => "Check the current state of the resource then set the `If-Match` header with the current ETag to resolve the conflict.",
+    "multi_delete" => "Multiple document DELETE not permitted"
   ]
 ];

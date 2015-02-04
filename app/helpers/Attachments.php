@@ -4,6 +4,11 @@ use \Locker\XApi\IMT as XAPIIMT;
 
 class Attachments {
 
+  /**
+   * Sets the attachments.
+   * @param String $content_type.
+   * @param String $incoming_statement
+   */
   static function setAttachments($content_type, $incoming_statement){
     $return = [];
     $sha_hashes = [];

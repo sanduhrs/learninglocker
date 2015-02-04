@@ -1,8 +1,4 @@
 <?php namespace Models;
-/**
- * Used to handle an LRSs 3 document APIs.
- *
- **/
 
 use \Jenssegers\Mongodb\Model as Eloquent;
 use \Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -11,8 +7,13 @@ use \Helpers\Helpers as Helpers;
 
 class Document extends Eloquent {
   protected $collection = 'documentapi';
-  protected $hidden = ['_id', 'lrs', 'apitype'];
+  protected $hidden = ['_id', 'lrs'];
 
+  /**
+   * PUTs the content into the document.
+   * @param String $content.
+   * @param String $contentType Content's type.
+   */
   private function putContent($content, $contentType) {
     switch ($contentType) {
       case 'application/json':
@@ -28,6 +29,11 @@ class Document extends Eloquent {
     $this->contentType = $contentType;
   }
 
+  /**
+   * POSTs the content into the document.
+   * @param String $content.
+   * @param String $contentType Content's type.
+   */
   private function postContent($content, $contentType) {
 
     if( $this->exists ){
@@ -51,10 +57,19 @@ class Document extends Eloquent {
     }
   }
 
+  /**
+   * Sets the SHA for the document.
+   * @param String $content.
+   */
   private function setSha($content) {
     $this->sha = '"'.strtoupper(sha1($content)).'"';
   }
 
+  /**
+   * Merges JSON content into the document.
+   * @param String $content.
+   * @param String $contentType Content's type.
+   */
   private function mergeJSONContent($content, $contentType) {
     if (!is_object($content)) {
       throw new \Exception(
@@ -69,10 +84,19 @@ class Document extends Eloquent {
     $this->setSha(json_encode($this->content));
   }
 
+  /**
+   * Overwrites content in the document.
+   * @param String $content.
+   */
   private function overwriteContent($content) {
     $this->content = Helpers::replaceDots($content);
   }
 
+  /**
+   * Saves the document.
+   * @param String $content.
+   * @param String $contentType Content's type.
+   */
   private function saveDocument($content, $contentType) {
     $dir = $this->getContentDir();
 
@@ -97,8 +121,9 @@ class Document extends Eloquent {
 
 
   /**
-   * Handle content storage
-   * @param Mixed $content          The content passed in the request
+   * Sets the content of the document.
+   * @param AssocArray $content_info Contains the content and contentType.
+   * @param String $method HTTP method used in the request.
    */
   public function setContent($content_info, $method) {
     $content = Helpers::replaceDots($content_info['content']);
@@ -121,6 +146,11 @@ class Document extends Eloquent {
 
   }
 
+  /**
+   * Gets the content's directory.
+   * Makes a directory if it doesn't already exist.
+   * @return String
+   */
   public function getContentDir(){
     $dir = base_path().'/uploads/'.$this->lrs.'/documents/';
     if( !file_exists($dir) ){
@@ -130,6 +160,10 @@ class Document extends Eloquent {
     return $dir;
   }
 
+  /**
+   * Gets the documents file path.
+   * @return String
+   */
   public function getFilePath(){
     return $this->getContentDir() . $this->content;
   }

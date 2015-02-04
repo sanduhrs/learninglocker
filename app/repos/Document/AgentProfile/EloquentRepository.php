@@ -23,6 +23,12 @@ class EloquentRepository extends DocumentRepository {
     'updated' => null
   ];
 
+  /**
+   * Extends a query to match multiple documents using the given data.
+   * @param Builder $query Query to extend.
+   * @param AssocArray $data Data from the request.
+   * @return Builder
+   */
   protected function constructIndexQuery(Builder $query, array $data) {
     if (!isset($data['agent'])) throw new \Exception(
       'Missing agent'
@@ -34,6 +40,12 @@ class EloquentRepository extends DocumentRepository {
     return $query;
   }
 
+  /**
+   * Extends a query to match a single document using the given data.
+   * @param Builder $query Query to extend.
+   * @param AssocArray $data Data from the request.
+   * @return Builder
+   */
   protected function constructShowQuery(Builder $query, array $data) {
     if (!isset($data['agent'])) throw new \Exception(
       'Missing agent'
@@ -49,6 +61,10 @@ class EloquentRepository extends DocumentRepository {
     return $query;
   }
 
+  /**
+   * Validates the data from the request.
+   * @param AssocArray $data Data from the request.
+   */
   protected function validateData(array $data) {
     if ($data['agent'] !== null) Helpers::validateAtom(new \Locker\XApi\Agent($data['agent']));
     if ($data['profileId'] !== null) Helpers::validateAtom(new \Locker\XApi\String($data['profileId']));
@@ -59,6 +75,11 @@ class EloquentRepository extends DocumentRepository {
     if ($data['method'] !== null) Helpers::validateAtom(new \Locker\XApi\String($data['method']));
   }
 
+  /**
+   * Gets and validates the data.
+   * @param AssocArray $data Data from the request.
+   * @return AssocArray
+   */
   protected function getData(array $data) {
     if ($data['agent'] !== null) $data['agent'] = json_decode($data['agent']);
     $data = parent::getData($data);

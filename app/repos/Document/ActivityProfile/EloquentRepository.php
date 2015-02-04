@@ -23,6 +23,12 @@ class EloquentRepository extends DocumentRepository {
     'updated' => null
   ];
 
+  /**
+   * Extends a query to match multiple documents using the given data.
+   * @param Builder $query Query to extend.
+   * @param AssocArray $data Data from the request.
+   * @return Builder
+   */
   protected function constructIndexQuery(Builder $query, array $data) {
     if (!isset($data['activityId'])) throw new \Exception(
       'Missing activityId'
@@ -34,6 +40,12 @@ class EloquentRepository extends DocumentRepository {
     return $query;
   }
 
+  /**
+   * Extends a query to match a single document using the given data.
+   * @param Builder $query Query to extend.
+   * @param AssocArray $data Data from the request.
+   * @return Builder
+   */
   protected function constructShowQuery(Builder $query, array $data) {
     if (!isset($data['activityId'])) throw new \Exception(
       'Missing activityId'
@@ -48,6 +60,10 @@ class EloquentRepository extends DocumentRepository {
     return $query;
   }
 
+  /**
+   * Validates the data from the request.
+   * @param AssocArray $data Data from the request.
+   */
   protected function validateData(array $data) {
     if ($data['activityId'] !== null) Helpers::validateAtom(new \Locker\XApi\IRI($data['activityId']));
     if ($data['profileId'] !== null) Helpers::validateAtom(new \Locker\XApi\String($data['profileId']));

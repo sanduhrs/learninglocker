@@ -29,7 +29,7 @@ class Request {
         $this->params = $requestParams;
       }
     }
-    
+
     // Return the cached params.
     return $this->params;
   }
@@ -63,11 +63,11 @@ class Request {
 
   /**
    * Gets a header from the request headers.
-   * @param  $key Header to be returned.
-   * @param  $default Value to be returned if the header is not set.
+   * @param $key Header to be returned.
+   * @param $default Value to be returned if the header is not set.
    * @return mixed Value of the header.
    */
-  public function header($key, $default=null) {
+  public function header($key, $default = null) {
     $value = \IlluminateRequest::header($key);
 
     // If the key is set in the headers then return it.
@@ -99,30 +99,34 @@ class Request {
 
   /**
    * Gets a param from the stored/cached params.
-   * @param  String $key Param to be retrieved.
-   * @param  mixed $default Value to be returned if the param is not set.
+   * @param String $key Param to be retrieved.
+   * @param mixed $default Value to be returned if the param is not set.
    * @return mixed Value of the param.
    */
   public function getParam($key, $default = null) {
-    // If the key has been set then return its value.
+    // Returns the key's value if it's set.
     if ($this->hasParam($key)) {
       return $this->getParams()[$key];
     }
 
-    // If the key has not been set then return the default value.
+    // Returns the default value if the key isn't set.
     else {
       return $default;
     }
   }
 
+  /**
+   * Gets the content from the param or request body.
+   * @return String content.
+   */
   public function getContent() {
     return $this->getParam('content', \IlluminateRequest::getContent());
   }
 
   /**
    * Determines if the param is set.
-   * @param  String  $key Param to be checked.
-   * @return boolean True if the param exists, false if it doesn't.
+   * @param String $key Param to be checked.
+   * @return Boolean True if the param exists, false if it doesn't.
    */
   public function hasParam($key) {
     return isset($this->getParams()[$key]);
@@ -140,7 +144,7 @@ class Request {
       $auth = explode(' ', $this->getParam(self::authParam));
       $decoded = base64_decode($auth[1]);
       $auth_parts = explode(':', $decoded);
-      
+
       $result[self::authUser] = $auth_parts[0];
       $result[self::authPass] = $auth_parts[1];
     }

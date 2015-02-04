@@ -12,6 +12,12 @@ interface InserterInterface {
 }
 
 class EloquentInserter implements InserterInterface {
+  /**
+   * Inserts statements into the DB using the authority.
+   * @param [XAPIStatement] $statements
+   * @param Authority $authority
+   * @return Boolean
+   */
   public function insert(array $statements, Authority $authority) {
     $statement_models = array_map(function (XAPIStatement $statement) use ($authority) {
       $this->checkDuplicate($statement, $authority);
@@ -23,6 +29,11 @@ class EloquentInserter implements InserterInterface {
     return $this->insertModels($statement_models, $authority);
   }
 
+  /**
+   * Checks the statement for duplicates with the authority.
+   * @param XAPIStatement $statement
+   * @param Authority $authority
+   */
   private function checkDuplicate(XAPIStatement $statement, Authority $authority) {
     $duplicate = (new EloquentGetter)
       ->where($authority)
@@ -35,6 +46,11 @@ class EloquentInserter implements InserterInterface {
     $this->checkMatch($statement, $duplicate);
   }
 
+  /**
+   * Checks for conflicts between two statements.
+   * @param XAPIStatement $statement
+   * @param XAPIStatement $matcher
+   */
   private function checkMatch(XAPIStatement $statement, XAPIStatement $matcher) {
     $new_statement = json_decode($statement->toJson(), true);
     $old_statement = json_decode($matcher->toJson(), true);
@@ -55,6 +71,12 @@ class EloquentInserter implements InserterInterface {
     };
   }
 
+  /**
+   * Stores the profile of the activity given in the statement using the authority.
+   * @param XAPIStatement $statement
+   * @param Authority $authority
+   * @return Boolean
+   */
   private function storeActivityProfile(XAPIStatement $statement, Authority $authority) {
     $definition = $statement->getPropValue('object.definition');
     if (gettype($definition) !== 'object') return;
@@ -64,7 +86,7 @@ class EloquentInserter implements InserterInterface {
       $authority,
       [
         'activityId' => $statement->getPropValue('object.id'),
-        'profileId' => $authority->getLRS(),
+        'profileId' => $authority->homePage.$authority->name,
         'content_info' => [
           'content' => json_encode($definition),
           'contentType' => 'application/json'
@@ -73,11 +95,14 @@ class EloquentInserter implements InserterInterface {
     );
   }
 
+  /**
+   * Constructs a new statement model using the statement and authority.
+   * @param XAPIStatement $statement
+   * @param Authority $authority
+   * @return [String => mixed] Constructed statement
+   */
   private function constructModel(XAPIStatement $statement, Authority $authority) {
     return [
-      'lrs' => [
-        '_id' => $authority->getLRS(),
-      ],
       'statement' => Helpers::replaceDots($statement->getValue()),
       'active' => false,
       'voided' => false,
@@ -85,6 +110,12 @@ class EloquentInserter implements InserterInterface {
     ];
   }
 
+  /**
+   * Inserts the statement models into the DB with the authority.
+   * @param [String => mixed] $statement
+   * @param Authority $authority
+   * @return Boolean
+   */
   private function insertModels(array $statement_models, Authority $authority) {
     return (new EloquentGetter)
       ->where($authority)

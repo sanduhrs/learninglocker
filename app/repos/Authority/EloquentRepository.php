@@ -12,22 +12,34 @@ interface Repository {
 }
 
 class EloquentRepository implements Repository {
+  /**
+   * Constructs a query restricted to the given authority.
+   * @param Authority $authority The Authority to restrict with.
+   * @return \Jenssegers\Mongodb\Eloquent\Builder
+   */
   private function where(Authority $authority) {
     return Authority::where(
-      'actor.account.homePage',
+      'homePage',
       'like',
-      $authority->actor->account->homePage.'%'
+      $authority->homePage.'%'
     );
   }
 
+  /**
+   * Gets all of the authorities accessible to the given authority.
+   * @param Authority $authority The Authority to restrict with.
+   * @return [Authority]
+   */
   public function index(Authority $authority) {
-    return $this->where($authority)->get();
+    return $this->where($authority)->get()->toArray();
   }
 
-  public function store(Authority $authority, $data) {
-
-  }
-
+  /**
+   * Gets the authority with the given ID if it's accessible to the given authority.
+   * @param Authority $authority The Authority to restrict with.
+   * @param String $id ID to match.
+   * @return Authority
+   */
   public function show(Authority $authority, $id) {
     return $this
       ->where($authority)
@@ -35,6 +47,22 @@ class EloquentRepository implements Repository {
       ->first();
   }
 
+  /**
+   * Creates a new authority.
+   * @param Authority $authority The Authority to restrict with.
+   * @param AssocArray $data Properties of the new authority.
+   * @return Authority
+   */
+  public function store(Authority $authority, $data) {
+
+  }
+
+  /**
+   * Gets the authority with the given key and secret.
+   * @param String $key Key to match.
+   * @param String $secret Secret to match.
+   * @return Authority
+   */
   public function showFromBasicAuth($key, $secret) {
     return Authority::where('credentials.key', $key)
       ->where('credentials.secret', $secret)
@@ -42,10 +70,23 @@ class EloquentRepository implements Repository {
       ->first();
   }
 
+  /**
+   * Updates an existing authority.
+   * @param Authority $authority The Authority to restrict with.
+   * @param String $id ID to match.
+   * @param AssocArray $data Properties to be updated.
+   * @return Authority
+   */
   public function update(Authority $authority, $id, $data) {
 
   }
 
+  /**
+   * Destroys the authority with the given ID if it's accessible to the given authority.
+   * @param Authority $authority The Authority to restrict with.
+   * @param String $id ID to match.
+   * @return Boolean
+   */
   public function destroy(Authority $authority, $id) {
 
   }

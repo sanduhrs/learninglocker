@@ -8,7 +8,15 @@ interface FormatterInterface {
   public function toIds(array $statements);
 }
 
+
+// https://github.com/adlnet/xAPI-Spec/blob/master/xAPI.md#details-34
 class EloquentFormatter implements FormatterInterface {
+  /**
+   * Converts the given statements to their canonical form using the given languages.
+   * @param [\stdClass] $statements
+   * @param [Stromg] $langs
+   * @return [\stdClass]
+   */
   public function toCanonical(array $statements, array $langs) {
     $statements = json_decode(json_encode($statements));
     return array_map(function (\stdClass $statement) use ($langs) {
@@ -16,6 +24,11 @@ class EloquentFormatter implements FormatterInterface {
     }, $statements);
   }
 
+  /**
+   * Converts the given statements to their IDs form.
+   * @param [\stdClass] $statements
+   * @return [\stdClass]
+   */
   public function toIds(array $statements) {
     $statements = json_decode(json_encode($statements));
     return array_map(function (\stdClass $statement) {
@@ -23,7 +36,14 @@ class EloquentFormatter implements FormatterInterface {
     }, $statements);
   }
 
+  /**
+   * Converts the given statement to its canonical form using the given languages.
+   * @param \stdClass $statement
+   * @param [String] $langs
+   * @return \stdClass
+   */
   private function getStatementCanonical(\stdClass $statement, array $langs) {
+    // Canocalises the object.
     if (isset($statement->object->definition)) {
       $definition = $statement->object->definition;
 
@@ -37,21 +57,29 @@ class EloquentFormatter implements FormatterInterface {
       $statement->object->definition = $definition;
     }
 
+    // Canocalises the verb.
     if (isset($statement->verb->display)) {
       $statement->verb->display = $this->canonicalise($statement->verb->display, $langs);
     }
     return $statement;
   }
 
+  /**
+   * Converts the given display to its canonical form using the given languages.
+   * @param \stdClass $display
+   * @param [String] $langs
+   * @return String
+   */
   private function canonicalise(\stdClass $display, array $langs) {
     $display_langs = array_keys((array) $display);
 
+    // Determines the acceptable languages.
     $acceptable_langs = array_filter($display_langs, function ($display_lang) use ($langs) {
       return in_array($display_lang, $langs);
     });
-
     $acceptable_langs = array_values($acceptable_langs);
 
+    // Returns the canonicalised display.
     if (count($acceptable_langs) > 0) {
       return $display->{$acceptable_langs[0]};
     } else if (count($display_langs) > 0) {
@@ -61,6 +89,11 @@ class EloquentFormatter implements FormatterInterface {
     }
   }
 
+  /**
+   * Converts the given statement to its IDs form.
+   * @param [\stdClass] $statement
+   * @return [\stdClass]
+   */
   private function getStatementIds(\stdClass $statement) {
     $actor = $statement->actor;
 
@@ -85,7 +118,13 @@ class EloquentFormatter implements FormatterInterface {
     return $statement;
   }
 
-  private function identifyObject($object, $identifier) {
+  /**
+   * Converts the given object to its ID form.
+   * @param \stdClass $object Object to be converted.
+   * @param String $identifier The identifier to be used.
+   * @return \stdClass
+   */
+  private function identifyObject(\stdClass $object, $identifier) {
     return (object) [
       $identifier => $object->{$identifier},
       'objectType' => $object->objectType
