@@ -9,6 +9,7 @@ return [
     "no_attachment" => "There were no attachments.",
     "required" => "`:field` is required but not set.",
     "void_voider" => "Cannot void a voiding statement",
-    "void_existence" => "Cannot a void a statement that does not exist."
+    "void_existence" => "Cannot a void a statement that does not exist.",
+    "unset_param" => ":field was not sent in this request."
   ]
 ];

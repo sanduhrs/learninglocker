@@ -1,8 +1,8 @@
 <?php namespace Controllers\XAPI;
 
+use \LockerRequest as LockerRequest;
 use \IlluminateResponse as IlluminateResponse;
 use \IlluminateRequest as IlluminateRequest;
-use \LockerRequest as LockerRequest;
 use \Repos\Statement\EloquentRepository as StatementRepository;
 use \Helpers\Exceptions\NotFound as NotFoundException;
 use \Helpers\Exceptions\Conflict as ConflictException;
@@ -16,6 +16,10 @@ class StatementController extends BaseController {
   const STATEMENT_ID = 'statementId';
   const VOIDED_ID = 'voidedStatementId';
 
+  /**
+   * Calls either index or show depending on the request.
+   * @return \Illuminate\Http\ResponseTrait Result of the index/show.
+   */
   protected function get() {
     // Gets the identifiers.
     $statement_id = LockerRequest::getParam(self::STATEMENT_ID);
@@ -36,6 +40,67 @@ class StatementController extends BaseController {
     }
   }
 
+  /**
+   * GETs all of the statements that fulfil the given request parameters.
+   * @return \Illuminate\Http\JsonResponse Response containing a more link and an array of statements.
+   */
+  private function index() {
+    // Defines the parameter keys.
+    $params = [
+      'agent', 'activity', 'verb', 'registration', 'since', 'until', 'active', 'voided',
+      'related_activities', 'related_agents', 'ascending', 'format', 'offset', 'limit',
+      'attachments'
+    ];
+
+    // Gets the parameter values.
+    $options = [];
+    foreach ($params as $param) {
+      $options[$param] = LockerRequest::getParam($param, null);
+    }
+
+    // Adds langs.
+    $options['langs'] = explode(',', IlluminateRequest::header('Accept-Language', ''));
+
+    // Gets the statements.
+    list($statements, $count) = (new StatementRepository)->index($this->getAuthority(), $options);
+
+    // Constructs the response.
+    return IlluminateResponse::json([
+      'more' => $this->getMoreLink(
+        $count,
+        $options['limit'],
+        $options['offset']
+      ),
+      'statements' => $statements
+    ], 200, $this->getCORSHeaders());
+  }
+
+  /**
+   * GETs a single statement that matches the given id.
+   * @param String $id UUID of the statement to be returned.
+   * @param Boolean $voided Determines if the statement to be returned has been voided.
+   * @return \Illuminate\Http\ResponseTrait Statement in JSON form.
+   */
+  private function show($id, $voided) {
+    if (array_diff(array_keys(
+      LockerRequest::getParams()),
+      [self::STATEMENT_ID, self::VOIDED_ID]
+    ) != []) throw new \Exception(
+      'Invalid params'
+    );
+
+    try {
+      $statement = (new StatementRepository)->show($this->getAuthority(), $id, $voided);
+      return IlluminateResponse::json($statement->statement, 200, $this->getCORSHeaders());
+    } catch (NotFoundException $ex) {
+      return IlluminateResponse::make('', 404, $this->getCORSHeaders());
+    }
+  }
+
+  /**
+   * Stores (POSTs) statements.
+   * @return \Illuminate\Http\JsonResponse Result of storing the statements.
+   */
   protected function store() {
     Helpers::validateAtom(new XAPIIMT(LockerRequest::header('Content-Type')));
 
@@ -48,13 +113,14 @@ class StatementController extends BaseController {
     try {
       return IlluminateResponse::json($this->createStatements(), 200, $this->getCORSHeaders());
     } catch (ConflictException $ex) {
-      return IlluminateResponse::json([
-        'message' => $ex->getMessage(),
-        'trace' => $ex->getTrace()
-      ], 409, $this->getCORSHeaders());
+      return $this->errorResponse($ex, 409);
     }
   }
 
+  /**
+   * Inserts (PUTs) a statement.
+   * @return \Illuminate\Http\ResponseTrait Result of the inserting a statement.
+   */
   protected function update() {
     Helpers::validateAtom(new XAPIIMT(LockerRequest::header('Content-Type')));
 
@@ -77,17 +143,22 @@ class StatementController extends BaseController {
 
       return IlluminateResponse::make('', 204);
     } catch (ConflictException $ex) {
-      return IlluminateResponse::json([
-        'message' => $ex->getMessage(),
-        'trace' => $ex->getTrace()
-      ], 409, $this->getCORSHeaders());
+      return $this->errorResponse($ex, 409);
     }
   }
 
+  /**
+   * Returns a "method not supported" response because you can't DELETE statements.
+   * @return \Illuminate\Http\ResponseTrait
+   */
   protected function destroy() {
     return IlluminateResponse::make('', 405);
   }
 
+  /**
+   * Gets the content and attachments from the request.
+   * @return AssocArray
+   */
   private function getParts() {
     // Gets the content.
     $content = \LockerRequest::getContent();
@@ -120,6 +191,13 @@ class StatementController extends BaseController {
     ];
   }
 
+  /**
+   * Constructs the "more link" for a statement response.
+   * @param Integer $total Number of statements that can be returned for the given request parameters.
+   * @param Integer $limit Number of statements to be outputted in the response.
+   * @param Integer $offset Number of statements being skipped.
+   * @return String A URL that can be used to get more statements for the given request parameters.
+   */
   private function getMoreLink($total, $limit, $offset) {
     $no_offset = $offset === null;
 
@@ -146,53 +224,11 @@ class StatementController extends BaseController {
     }
   }
 
-  private function index() {
-    // Defines the parameter keys.
-    $params = [
-      'agent', 'activity', 'verb', 'registration', 'since', 'until', 'active', 'voided',
-      'related_activities', 'related_agents', 'ascending', 'format', 'offset', 'limit',
-      'attachments'
-    ];
-
-    // Gets the parameter values.
-    $options = [];
-    foreach ($params as $param) {
-      $options[$param] = LockerRequest::getParam($param, null);
-    }
-
-    // Adds langs.
-    $options['langs'] = explode(',', IlluminateRequest::header('Accept-Language', ''));
-
-    // Gets the statements.
-    list($statements, $count) = (new StatementRepository)->index($this->getAuthority(), $options);
-
-    // Constructs the response.
-    return IlluminateResponse::json([
-      'more' => $this->getMoreLink(
-        $count,
-        $options['limit'],
-        $options['offset']
-      ),
-      'statements' => $statements
-    ], 200, $this->getCORSHeaders());
-  }
-
-  private function show($id, $voided) {
-    if (array_diff(array_keys(
-      LockerRequest::getParams()),
-      [self::STATEMENT_ID, self::VOIDED_ID]
-    ) != []) throw new \Exception(
-      'Invalid params'
-    );
-
-    try {
-      $statement = (new StatementRepository)->show($this->getAuthority(), $id, $voided);
-      return IlluminateResponse::json($statement->statement, 200, $this->getCORSHeaders());
-    } catch (NotFoundException $ex) {
-      return IlluminateResponse::make('', 404, $this->getCORSHeaders());
-    }
-  }
-
+  /**
+   * Creates statements from the content of the request.
+   * @param Callable|null $modifier A function that modifies the statements before storing them.
+   * @return AssocArray Result of storing the statements.
+   */
   private function createStatements(Callable $modifier = null) {
     // Gets parts of the request.
     $parts = $this->getParts();

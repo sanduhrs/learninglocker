@@ -3,8 +3,8 @@
 use \Models\Authority as Authority;
 use \Models\Statement as Statement;
 use \Helpers\Exceptions\NotFound as NotFoundException;
-use \DB as Mongo;
 use \Helpers\Helpers as Helpers;
+use \DB as Mongo;
 
 interface GetterInterface {
   public function aggregate(Authority $authority, array $pipeline);

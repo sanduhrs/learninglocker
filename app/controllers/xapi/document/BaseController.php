@@ -4,12 +4,12 @@ use \LockerRequest as LockerRequest;
 use \IlluminateResponse as IlluminateResponse;
 use \Input as Input;
 use \Controllers\XAPI\BaseController as XAPIController;
+use \Models\Authority as Authority;
 use \Carbon\Carbon as Carbon;
 use \Helpers\Helpers as Helpers;
 use \Helpers\Exceptions\Precondition as PreconditionException;
 use \Helpers\Exceptions\Conflict as ConflictException;
 use \Locker\XApi\Timestamp as XAPITimestamp;
-use \Models\Authority as Authority;
 
 abstract class BaseController extends XAPIController {
 
@@ -18,6 +18,10 @@ abstract class BaseController extends XAPIController {
   protected static $document_type = '';
   protected static $document_repo = '';
 
+  /**
+   * Calls either index or show depending on whether the document identifier was given in the request.
+   * @return \Illuminate\Http\ResponseTrait Result of the index/show.
+   */
   public function get() {
     if (LockerRequest::getParam(static::$document_identifier) === null) {
       return $this->index();
@@ -26,13 +30,17 @@ abstract class BaseController extends XAPIController {
     }
   }
 
+  /**
+   * GETs all of the documents that fulfil the given request parameters.
+   * @return \Illuminate\Http\JsonResponse Response containing the IDs of the documents fulfilling the parameters.
+   */
   protected function index() {
     $documents = (new static::$document_repo)->index(
       $this->getAuthority(),
       LockerRequest::getParams()
     );
 
-    // Returns array of stateId's.
+    // Returns array of Document ID's.
     $ids = array_map(function ($document) {
       return $document->{static::$document_identifier};
     }, $documents);
@@ -40,8 +48,8 @@ abstract class BaseController extends XAPIController {
   }
 
   /**
-   * Returns (GETs) a single document.
-   * @return DocumentResponse
+   * GETs a single document that fulfils the given request parameters.
+   * @return \Illuminate\Http\ResponseTrait Document.
    */
   protected function show() {
     $document = (new static::$document_repo)->show(
@@ -76,8 +84,8 @@ abstract class BaseController extends XAPIController {
   }
 
   /**
-   * Creates (POSTs) a new document.
-   * @return Response
+   * Stores (POSTs) a document.
+   * @return \Illuminate\Http\ResponseTrait Result of storing the document.
    */
   public function store() {
     return $this->insert('POST', function (Authority $authority, array $data) {
@@ -89,8 +97,8 @@ abstract class BaseController extends XAPIController {
   }
 
   /**
-   * Creates (PUTs) a new document.
-   * @return Response
+   * Updates (PUTs) a document.
+   * @return \Illuminate\Http\ResponseTrait Result of updating the document.
    */
   public function update() {
     return $this->insert('PUT', function (Authority $authority, array $data) {
@@ -101,7 +109,13 @@ abstract class BaseController extends XAPIController {
     });
   }
 
-  private function insert($method, callable $repository_handler) {
+  /**
+   * Inserts a document.
+   * @param String $method HTTP method used in the request.
+   * @param Callable $repository_handler A function that stores the documents and returns a response.
+   * @return \Illuminate\Http\ResponseTrait Result of inserting the document.
+   */
+  private function insert($method, Callable $repository_handler) {
     $data = LockerRequest::getParams();
     $data['content_info'] = $this->getAttachedContent($method, 'content');
     $data['ifMatch'] = LockerRequest::header('If-Match');
@@ -112,21 +126,15 @@ abstract class BaseController extends XAPIController {
     try {
       return $repository_handler($this->getAuthority(), $data);
     } catch (PreconditionException $ex) {
-      return IlluminateResponse::json([
-        'message' => $ex->getMessage(),
-        'trace' => $ex->getTrace()
-      ], 412, $this->getCORSHeaders());
+      return $this->errorResponse($ex, 412);
     } catch (ConflictException $ex) {
-      return IlluminateResponse::json([
-        'message' => $ex->getMessage(),
-        'trace' => $ex->getTrace()
-      ], 409, $this->getCORSHeaders());
+      return $this->errorResponse($ex, 409);
     }
   }
 
   /**
-   * Deletes a document.
-   * @return Response
+   * DELETEs a document.
+   * @return \Illuminate\Http\ResponseTrait Result of deleting the document.
    */
   public function destroy() {
     (new static::$document_repo)->destroy(
@@ -134,13 +142,14 @@ abstract class BaseController extends XAPIController {
       LockerRequest::getParams()
     );
 
-    return IlluminateResponse::json(null, 204);
+    return IlluminateResponse::make('', 204, $this->getCORSHeaders());
   }
 
   /**
-   * Retrieves attached file content
-   * @param string $name Field name
-   * @return Array
+   * Gets the attached file content from the request.
+   * @param String $method HTTP method used in the request.
+   * @param String $name Field to be retrieved.
+   * @return AssocArray Contains the content and the contentType.
    */
   protected function getAttachedContent($method, $name = 'content') {
     if (LockerRequest::hasParam('method') || $method === 'POST') {
@@ -156,9 +165,9 @@ abstract class BaseController extends XAPIController {
   }
 
   /**
-   * Checks for files, then retrieves the stored param.
-   * @param String $name Field name
-   * @return Array
+   * Gets the POSTed content.
+   * @param String $name Field to be retrieved.
+   * @return AssocArray Contains the content and the contentType.
    */
   protected function getPostContent($name){
     if (Input::hasFile($name)) {
@@ -174,7 +183,9 @@ abstract class BaseController extends XAPIController {
         $contentType = is_object(json_decode($content)) ? 'application/json' : 'text/plain';
       }
     } else {
-      throw new \Exception(sprintf('`%s` was not sent in this request', $name));
+      throw new \Exception(trans('xapi.errors.unset_param', [
+        'field' => $name
+      ]));
     }
 
     return [
@@ -183,6 +194,10 @@ abstract class BaseController extends XAPIController {
     ];
   }
 
+  /**
+   * Gets and validates the 'Updated' header from the request.
+   * @return String Updated header as a XAPITimestamp.
+   */
   private function getUpdatedHeader() {
     $updated = LockerRequest::header('Updated', Carbon::now()->toISO8601String());
     Helpers::validateAtom(new XAPITimestamp($updated));
@@ -190,9 +205,9 @@ abstract class BaseController extends XAPIController {
   }
 
   /**
-   * Determines if $contentType is a form.
-   * @param string $contentType
-   * @return boolean
+   * Determines if the given contentType is a form.
+   * @param String $contentType
+   * @return Boolean True if the contentType is a form.
    */
   private function checkFormContentType($contentType = '') {
     if (!is_string($contentType)) return false;
