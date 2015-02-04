@@ -81,8 +81,8 @@ class EloquentGetter implements GetterInterface {
     $pipeline[] = ['$group' => $this->groupStatementProps()];
 
     // Limit and offset.
-    $pipeline[] = ['$skip' => (int) $options['offset']];
-    $pipeline[] = ['$limit' => (int) $options['limit']];
+    $pipeline[] = ['$skip' => $options['offset']];
+    $pipeline[] = ['$limit' => $options['limit']];
 
     // Sorts statements.
     $order = $options['ascending'] === true ? 1 : -1;
@@ -147,7 +147,7 @@ class EloquentGetter implements GetterInterface {
       },
       'verb' => function ($verb) {
         Helpers::validateAtom(new \Locker\XApi\IRI($verb));
-        return ['statement.verb.id' => $verb];
+        return ['statement.verb.id' => Helpers::replaceDots($verb)];
       },
       'registration' => function ($registration) {
         Helpers::validateAtom(new \Locker\XApi\UUID($registration));
@@ -155,15 +155,15 @@ class EloquentGetter implements GetterInterface {
       },
       'activity' => function ($activity, array $options) {
         Helpers::validateAtom(new \Locker\XApi\IRI($activity));
-        return $this->matchActivity($activity, $options);
+        return $this->matchActivity(Helpers::replaceDots($activity), $options);
       },
       'since' => function ($since) {
         Helpers::validateAtom(new \Locker\XApi\Timestamp($since));
-        return ['statement.stored' => ['$gt' => $since]];
+        return ['statement.stored' => ['$gt' => Helpers::replaceDots($since)]];
       },
       'until' => function ($until) {
         Helpers::validateAtom(new \Locker\XApi\Timestamp($until));
-        return ['statement.stored' => ['$lte' => $until]];
+        return ['statement.stored' => ['$lte' => Helpers::replaceDots($until)]];
       },
       'active' => function ($active) {
         Helpers::validateAtom(new \Locker\XApi\Boolean($active));
@@ -196,7 +196,7 @@ class EloquentGetter implements GetterInterface {
     $identifier_key = Helpers::getAgentIdentifier($agent);
     $identifier_value = $agent->{$identifier_key};
 
-    return $this->matchOption($identifier_value, $options['related_agents'], [
+    return $this->matchOption(Helpers::replaceDots($identifier_value), $options['related_agents'], [
       "statement.actor.$identifier_key",
       "statement.object.$identifier_key"
     ], [
@@ -238,15 +238,14 @@ class EloquentGetter implements GetterInterface {
   private function validateIndexOptions(array $options) {
     if ($options['offset'] < 0) throw new \Exception('`offset` must be a positive interger.');
     if ($options['limit'] < 1) throw new \Exception('`limit` must be a positive interger.');
-    Helpers::validateAtom(new \Locker\XApi\Boolean($options['related_agents']));
-    Helpers::validateAtom(new \Locker\XApi\Boolean($options['related_activities']));
-    Helpers::validateAtom(new \Locker\XApi\Boolean($options['attachments']));
-    Helpers::validateAtom(new \Locker\XApi\Boolean($options['active']));
-    Helpers::validateAtom(new \Locker\XApi\Boolean($options['voided']));
-    Helpers::validateAtom(new \Locker\XApi\Boolean($options['ascending']));
+    Helpers::validateAtom(new \Locker\XApi\Boolean($options['related_agents']), 'related_activities');
+    Helpers::validateAtom(new \Locker\XApi\Boolean($options['related_activities']), 'related_activities');
+    Helpers::validateAtom(new \Locker\XApi\Boolean($options['attachments']), 'attachments');
+    Helpers::validateAtom(new \Locker\XApi\Boolean($options['ascending']), 'ascending');
   }
 
   private function getIndexOptions(array $given_options) {
+    // Merges with defaults.
     $options = $this->getOptions($given_options, [
       'agent' => null,
       'activity' => null,
@@ -265,8 +264,31 @@ class EloquentGetter implements GetterInterface {
       'langs' => [],
       'attachments' => false
     ]);
-    if ($options['limit'] === 0) $options['limit'] = self::DEFAULT_LIMIT;
+
+    // Converts types.
+    $options['active'] = $this->convertToBoolean($options['active']);
+    $options['voided'] = $this->convertToBoolean($options['voided']);
+    $options['related_agents'] = $this->convertToBoolean($options['related_agents']);
+    $options['related_activities'] = $this->convertToBoolean($options['related_activities']);
+    $options['attachments'] = $this->convertToBoolean($options['attachments']);
+    $options['ascending'] = $this->convertToBoolean($options['ascending']);
+    $options['limit'] = $this->convertToInt($options['limit']);
+    $options['offset'] = $this->convertToInt($options['offset']);
+
+    if ($options['limit'] == 0) $options['limit'] = self::DEFAULT_LIMIT;
     return $options;
+  }
+
+  private function convertToBoolean($value) {
+    if (gettype($value) === 'string') $value = strtolower($value);
+    if ($value === 'true') return true;
+    if ($value === 'false') return false;
+    return $value;
+  }
+
+  private function convertToInt($value) {
+    $converted_value = (int) $value;
+    return ($value !== (string) $converted_value) ? $value : $converted_value;
   }
 
   private function getOptions(array $given_options, array $defaults) {

@@ -51,10 +51,10 @@ class Helpers {
     ];
   }
 
-  static function validateAtom(XAPIAtom $atom) {
+  static function validateAtom(XAPIAtom $atom, $trace = '') {
     $errors = $atom->validate();
-    if (count($errors) > 0) throw new \Exception(json_encode(array_map(function (XAPIError $error) {
-      return (string) $error;
+    if (count($errors) > 0) throw new \Exception(json_encode(array_map(function (XAPIError $error) use ($trace) {
+      return (string) $error->addTrace($trace);
     }, $errors)));
   }
 
