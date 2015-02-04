@@ -19,6 +19,11 @@ class Authority extends Model {
    * @return \stdClass Actor.
    */
   public function getActor() {
-    return json_decode(json_encode($this->actor));
+    return (object) [
+      'account' => (object) [
+        'name' => $this->name,
+        'homePage' => $this->homePage
+      ]
+    ];
   }
 }

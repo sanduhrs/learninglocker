@@ -54,7 +54,7 @@ class EloquentStorer implements StorerInterface {
       $constructed_statement = new XAPIStatement($statement);
 
       // Validates $constructed_statement.
-      Helpers::validateAtom($constructed_statement);
+      Helpers::validateAtom($constructed_statement, 'statement');
 
       // Adds $constructed_statement to $constructed_statements.
       if (isset($constructed_statements[$statement->id])) {

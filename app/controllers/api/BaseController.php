@@ -55,7 +55,7 @@ abstract class BaseController extends IlluminateController {
   protected function errorResponse(Exception $exception, $code = 400, $headers = []) {
     return IlluminateResponse::json([
       'message' => $exception->getMessage(),
-      'trace' => Config::get('app.debug') ? $exception->getTrace() : '`debug` must be `true` in the App\'s config to get a trace.'
+      'trace' => Config::get('app.debug') ? $exception->getTrace() : trans('api.info.trace')
     ], $code, array_merge($this->getCORSHeaders(), $headers));
   }
 }

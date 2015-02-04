@@ -79,10 +79,10 @@ class Helpers {
    * @param XAPIAtom $atom Atom to be validated.
    * @param String $trace Where the atom has came from (i.e. request parameter name).
    */
-  static function validateAtom(XAPIAtom $atom, $trace = '') {
+  static function validateAtom(XAPIAtom $atom, $trace = null) {
     $errors = $atom->validate();
     if (count($errors) > 0) throw new \Exception(json_encode(array_map(function (XAPIError $error) use ($trace) {
-      return (string) $error->addTrace($trace);
+      return (string) ($trace === null ? $error : $error->addTrace($trace));
     }, $errors)));
   }
 

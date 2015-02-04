@@ -5,6 +5,7 @@ use \Models\Statement as Statement;
 use \Helpers\Exceptions\NotFound as NotFoundException;
 use \Helpers\Helpers as Helpers;
 use \DB as Mongo;
+use \MongoRegex as MongoRegex;
 
 interface GetterInterface {
   public function aggregate(Authority $authority, array $pipeline);

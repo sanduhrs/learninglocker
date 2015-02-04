@@ -32,7 +32,7 @@ abstract class EloquentRepository implements Repository {
    */
   protected function where(Authority $authority) {
     return Document::where(
-      'authority.homePage',
+      'authority',
       'like',
       $authority->homePage.'%'
     );
@@ -116,7 +116,7 @@ abstract class EloquentRepository implements Repository {
     // Updates document.
     if ($existing_document === null) {
       $document = new Document;
-      $document->authority = $authority->homePage.$authority->name;
+      $document->authority = $authority->homePage;
       $document->documentType = static::$document_type;
       $document = $this->setActivityProviderProps($document, $data);
     } else {
