@@ -11,6 +11,13 @@ interface StorerInterface {
 }
 
 class EloquentStorer implements StorerInterface {
+  /**
+   * Stores the given statements with the authority and attachments.
+   * @param [\stdClass] $statements
+   * @param Authority $authority The Authority to restrict with.
+   * @param [mixed] $attachments
+   * @return [String] ID's of all the stored statements.
+   */
   public function store(array $statements, Authority $authority, array $attachments) {
     $statements = $this->constructStatements($statements, $authority);
 
@@ -23,6 +30,12 @@ class EloquentStorer implements StorerInterface {
     return array_keys($statements);
   }
 
+  /**
+   * Constructs the given statements with the authority.
+   * @param [\stdClass] $statements
+   * @param Authority $authority The Authority to restrict with.
+   * @return [XAPIStatement]
+   */
   private function constructStatements(array $statements, Authority $authority) {
     $constructed_statements = [];
 
@@ -54,14 +67,32 @@ class EloquentStorer implements StorerInterface {
     return $constructed_statements;
   }
 
+  /**
+   * Inserts the given statements with the authority.
+   * @param [\stdClass] $statements
+   * @param Authority $authority The Authority to restrict with.
+   * @return Boolean
+   */
   private function insertStatements(array $statements, Authority $authority) {
     return (new EloquentInserter)->insert($statements, $authority);
   }
 
+  /**
+   * Links the given statements with the authority.
+   * @param [\stdClass] $statements
+   * @param Authority $authority The Authority to restrict with.
+   * @return Boolean
+   */
   private function linkStatements(array $statements, Authority $authority) {
     return (new EloquentLinker)->link($statements, $authority);
   }
 
+  /**
+   * Activates the given statements with the authority.
+   * @param [\stdClass] $statements
+   * @param Authority $authority The Authority to restrict with.
+   * @return Boolean
+   */
   private function activateStatements(array $statements, Authority $authority) {
     return (new EloquentGetter)
       ->where($authority)
@@ -69,6 +100,11 @@ class EloquentStorer implements StorerInterface {
       ->update(['active' => true]);
   }
 
+  /**
+   * Stores the attachments with the authority.
+   * @param [mixed] $attachments
+   * @param Authority $authority The Authority to restrict with.
+   */
   private function storeAttachments(array $attachments, Authority $authority) {
     foreach ($attachments as $attachment) {
       // Determines the delimiter.
@@ -91,6 +127,13 @@ class EloquentStorer implements StorerInterface {
     }
   }
 
+  /**
+   * Constructs the file path from the raw headers.
+   * @param String $raw_headers
+   * @param String $delim Delimiter to be used to split strings.
+   * @param Authority $authority The Authority to restrict with.
+   * @return String
+   */
   private function getFileName($raw_headers, $delim, Authority $authority) {
     // Determines headers.
     $headers = $this->getHeaders($raw_headers, $delim);
@@ -112,6 +155,12 @@ class EloquentStorer implements StorerInterface {
     return $destination_path . $file_name;
   }
 
+  /**
+   * Gets an array of headers using the raw headers and the delimeter.
+   * @param String $raw_headers
+   * @param String $delim Delimiter to be used to split strings.
+   * @return [String => mixed]
+   */
   private function getHeaders($raw_headers, $delim) {
     $raw_headers = explode($delim, $raw_headers);
     $headers = [];
@@ -124,6 +173,11 @@ class EloquentStorer implements StorerInterface {
     return $headers;
   }
 
+  /**
+   * Gets the extension using the valid content type.
+   * @param String $content_type
+   * @return String
+   */
   private function getExtension($content_type) {
     Helpers::validateAtom(new XAPIIMT($content_type));
     $ext = array_search($content_type, DocumentFiles::$types);

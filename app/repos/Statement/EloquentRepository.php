@@ -4,7 +4,6 @@ use \Models\Authority as Authority;
 
 interface Repository {
   public function aggregate(Authority $authority, array $pipeline);
-  public function count(Authority $authority);
   public function index(Authority $authority, array $options);
   public function show(Authority $authority, $id, $voided = false, $active = true);
   public function store(Authority $authority, array $statements, array $attachments);
@@ -13,10 +12,6 @@ interface Repository {
 class EloquentRepository implements Repository {
   public function aggregate(Authority $authority, array $pipeline) {
     return (new EloquentGetter)->aggregate($authority, $pipeline);
-  }
-
-  public function count(Authority $authority) {
-    return (new EloquentGetter)->count($authority);
   }
 
   public function index(Authority $authority, array $options) {

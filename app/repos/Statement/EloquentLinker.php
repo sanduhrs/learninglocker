@@ -12,11 +12,21 @@ interface LinkerInterface {
 class EloquentLinker implements LinkerInterface {
   private $to_update = [];
 
+  /**
+   * Links statements together.
+   * @param [XAPIStatement] $statements
+   * @param Authority $authority The authority to restrict with.
+   */
   public function link(array $statements, Authority $authority) {
     $this->updateReferences($statements, $authority);
     $this->voidStatements($statements, $authority);
   }
 
+  /**
+   * Updates statement references.
+   * @param [XAPIStatement] $statements
+   * @param Authority $authority The authority to restrict with.
+   */
   public function updateReferences(array $statements, Authority $authority) {
     $this->to_update = array_values(array_map(function (XAPIStatement $statement) use ($authority) {
       return $this->addRefBy($statement, $authority);
@@ -27,12 +37,22 @@ class EloquentLinker implements LinkerInterface {
     }
   }
 
+  /**
+   * Voids statements that need to be voided.
+   * @param [XAPIStatement] $statements
+   * @param Authority $authority The authority to restrict with.
+   */
   public function voidStatements(array $statements, Authority $authority) {
     return array_map(function (XAPIStatement $statement) use ($authority) {
       return $this->voidStatement($statement, $authority);
     }, $statements);
   }
 
+  /**
+   * Voids a statement if it needs to be voided.
+   * @param XAPIStatement $statement
+   * @param Authority $authority The authority to restrict with.
+   */
   private function voidStatement(XAPIStatement $statement, Authority $authority) {
     if (!$this->isVoiding($statement)) return;
 
@@ -57,14 +77,29 @@ class EloquentLinker implements LinkerInterface {
     }
   }
 
+  /**
+   * Determines if a statement (represented as an associative array) is a voiding statement.
+   * @param [String => mixed] $statement
+   * @return Boolean
+   */
   private function isVoidingArray(array $statement) {
     return $this->isVoiding(XAPIStatement::createFromJson(json_encode($statement)));
   }
 
+  /**
+   * Determines if a statement (represented as an associative array) is a referencing statement.
+   * @param [String => mixed] $statement
+   * @return Boolean
+   */
   private function isReferencingArray(array $statement) {
     return $this->isVoiding(XAPIStatement::createFromJson(json_encode($statement)));
   }
 
+  /**
+   * Determines if a statement is a voiding statement.
+   * @param XAPIStatement $statement
+   * @return Boolean
+   */
   private function isVoiding(XAPIStatement $statement) {
     return (
       Helpers::replaceHTMLDots($statement->getPropValue('verb.id')) === 'http://adlnet.gov/expapi/verbs/voided' &&
@@ -72,10 +107,21 @@ class EloquentLinker implements LinkerInterface {
     );
   }
 
+  /**
+   * Determines if a statement is a referencing statement.
+   * @param XAPIStatement $statement
+   * @return Boolean
+   */
   private function isReferencing(XAPIStatement $statement) {
     return $statement->getPropValue('object.objectType') === 'StatementRef';
   }
 
+  /**
+   * Adds an array of all the statement ID's of statements that refer to the given statement.
+   * @param XAPIStatement $statement
+   * @param Authority $authority The authority to restrict with.
+   * @return [String => mixed] Statement model with a refBy property.
+   */
   private function addRefBy(XAPIStatement $statement, Authority $authority) {
     $statement_id = $statement->getPropValue('id');
 
@@ -93,6 +139,12 @@ class EloquentLinker implements LinkerInterface {
     return $model;
   }
 
+  /**
+   * Gets all of the statements referred to by the given statement.
+   * @param [String => mixed] $statement
+   * @param Authority $authority The authority to restrict with.
+   * @return [String => mixed] Referred statements.
+   */
   private function getReferredStatement(array $statement, Authority $authority) {
     return (new EloquentGetter)
       ->where($authority)
@@ -100,6 +152,13 @@ class EloquentLinker implements LinkerInterface {
       ->first()->toArray();
   }
 
+  /**
+   * Updates the links for a given statement
+   * @param [String => mixed] $statement
+   * @param Authority $authority The authority to restrict with.
+   * @param [[String => mixed]]|null $refs Statements referred to by the given statement.
+   * @return [String => mixed] Referred statements.
+   */
   private function updateLinks(array $statement, Authority $authority, array $refs = null) {
     $statement_copy = $statement;
 
