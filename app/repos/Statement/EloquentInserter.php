@@ -86,7 +86,7 @@ class EloquentInserter implements InserterInterface {
       $authority,
       [
         'activityId' => $statement->getPropValue('object.id'),
-        'profileId' => $authority->homePage.$authority->name,
+        'profileId' => $authority->homePage,
         'content_info' => [
           'content' => json_encode($definition),
           'contentType' => 'application/json'

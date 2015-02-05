@@ -3,6 +3,7 @@
 use \Jenssegers\Mongodb\Eloquent\Builder as Builder;
 use \Repos\Document\EloquentRepository as DocumentRepository;
 use \Helpers\Helpers as Helpers;
+use \Models\Authority as Authority;
 
 class EloquentRepository extends DocumentRepository {
   protected static $document_type = 'agentProfile';
@@ -84,5 +85,23 @@ class EloquentRepository extends DocumentRepository {
     if ($data['agent'] !== null) $data['agent'] = json_decode($data['agent']);
     $data = parent::getData($data);
     return $data;
+  }
+
+  /**
+   * Constructs a Person that fulfils the given parameters.
+   * https://github.com/adlnet/xAPI-Spec/blob/master/xAPI.md#combined-information-get
+   * @return \stdClass.
+   */
+  public function getPerson(Authority $authority, array $data) {
+    $agents = $this->index($authority, $data);
+    $profile = (object) [
+      'objectType' => 'Person',
+      'name' => array_unique(array_column($agents, 'name')),
+      'mbox' => array_unique(array_column($agents, 'mbox')),
+      'mbox_sha1sum' => array_unique(array_column($agents, 'mbox_sha1sum')),
+      'openid' => array_unique(array_column($agents, 'openid')),
+      'accounts' => array_unique(array_column($agents, 'accounts'))
+    ];
+    return $profile;
   }
 }

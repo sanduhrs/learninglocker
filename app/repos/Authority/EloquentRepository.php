@@ -58,14 +58,14 @@ class EloquentRepository implements Repository {
   }
 
   /**
-   * Gets the authority with the given key and secret.
-   * @param String $key Key to match.
-   * @param String $secret Secret to match.
+   * Gets the authority with the given username and password.
+   * @param String $username Username to match.
+   * @param String $password Password to match.
    * @return Authority
    */
-  public function showFromBasicAuth($key, $secret) {
-    return Authority::where('credentials.key', $key)
-      ->where('credentials.secret', $secret)
+  public function showFromBasicAuth($username, $password) {
+    return Authority::where('credentials.username', $username)
+      ->where('credentials.password', $password)
       ->where('auth', 'basic')
       ->first();
   }
