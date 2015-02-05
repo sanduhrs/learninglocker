@@ -4,7 +4,7 @@ use \Jenssegers\Mongodb\Model as Model;
 
 class Authority extends Model {
   protected $collection = 'authorities';
-  protected $fillable = ['name', 'homePage', 'description', 'auth', 'credetials'];
+  protected $fillable = ['name', 'homePage', 'description', 'auth', 'credentials'];
   protected $hidden = ['_id'];
 
   /**

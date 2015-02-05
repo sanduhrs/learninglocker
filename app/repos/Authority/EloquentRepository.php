@@ -48,7 +48,7 @@ class EloquentRepository implements Repository {
       ->where('_id', $id)
       ->first();
 
-    if ($shown_authority === null) throw new NotFoundException('Authority', $id);
+    if ($shown_authority === null) throw new NotFoundException($id, 'Authority');
 
     return $shown_authority;
   }
@@ -62,7 +62,7 @@ class EloquentRepository implements Repository {
   public function store(Authority $authority, array $data) {
     // Validates the given auth type.
     $acceptable_auths = ['basic'];
-    if (isset($data['auth']) && in_array($data['auth'], $acceptable_auths)) throw new \Exception(
+    if (isset($data['auth']) && !in_array($data['auth'], $acceptable_auths)) throw new \Exception(
       trans('api.errors.auth_type', [
         'types' => implode(', ', $acceptable_auths),
         'auth' => $data['auth']
@@ -114,7 +114,9 @@ class EloquentRepository implements Repository {
    */
   public function update(Authority $authority, $id, array $data) {
     $updated_authority = $this->show($authority, $id);
-    $updated_authority->update($data);
+    $updated_authority->update([
+      'description' => isset($data['description']) ? $data['description'] : $updated_authority->description
+    ]);
     return $updated_authority;
   }
 
