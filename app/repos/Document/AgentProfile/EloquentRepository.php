@@ -93,7 +93,7 @@ class EloquentRepository extends DocumentRepository {
    * @return \stdClass.
    */
   public function getPerson(Authority $authority, array $data) {
-    $agents = $this->index($authority, $data);
+    $agents = array_column($this->indexBuilder($authority, $data)->get()->toArray(), 'agent');
     $profile = (object) [
       'objectType' => 'Person',
       'name' => array_unique(array_column($agents, 'name')),
@@ -102,6 +102,6 @@ class EloquentRepository extends DocumentRepository {
       'openid' => array_unique(array_column($agents, 'openid')),
       'accounts' => array_unique(array_column($agents, 'accounts'))
     ];
-    return $profile;
+    return Helpers::replaceHTMLDots($profile);
   }
 }
