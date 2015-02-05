@@ -107,4 +107,12 @@ class Helpers {
       str_replace('&46;', '.', json_encode($value))
     );
   }
+
+  /**
+   * Generates a random sha1 value.
+   * @return String
+   */
+  static function getRandomSha(){
+    return sha1(uniqid(mt_rand(), true));
+  }
 }

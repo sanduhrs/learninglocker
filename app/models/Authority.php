@@ -4,15 +4,8 @@ use \Jenssegers\Mongodb\Model as Model;
 
 class Authority extends Model {
   protected $collection = 'authorities';
-
-  /**
-   * Gets the LRS associated with the Authority.
-   * @return String LRS ID.
-   */
-  public function getLRS() {
-    $home_page = explode('/', $this->actor['account']['homePage']);
-    return array_pop($home_page);
-  }
+  protected $fillable = ['name', 'homePage', 'description', 'auth', 'credetials'];
+  protected $hidden = ['_id'];
 
   /**
    * Gets the actor associated with the Authority.

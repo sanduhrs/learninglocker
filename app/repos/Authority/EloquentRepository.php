@@ -1,13 +1,15 @@
 <?php namespace Repos\Authority;
 
 use \Models\Authority as Authority;
+use \Helpers\Helpers as Helpers;
+use \Helpers\Exceptions\NotFound as NotFoundException;
 
 interface Repository {
   public function index(Authority $authority);
-  public function store(Authority $authority, $data);
+  public function store(Authority $authority, array $data);
   public function show(Authority $authority, $id);
-  public function showFromBasicAuth($key, $secret);
-  public function update(Authority $authority, $id, $data);
+  public function showFromBasicAuth($username, $password);
+  public function update(Authority $authority, $id, array $data);
   public function destroy(Authority $authority, $id);
 }
 
@@ -41,20 +43,53 @@ class EloquentRepository implements Repository {
    * @return Authority
    */
   public function show(Authority $authority, $id) {
-    return $this
+    $shown_authority = $this
       ->where($authority)
       ->where('_id', $id)
       ->first();
+
+    if ($shown_authority === null) throw new NotFoundException('Authority', $id);
+
+    return $shown_authority;
   }
 
   /**
    * Creates a new authority.
    * @param Authority $authority The Authority to restrict with.
-   * @param AssocArray $data Properties of the new authority.
+   * @param [String => mixed] $data Properties of the new authority.
    * @return Authority
    */
-  public function store(Authority $authority, $data) {
+  public function store(Authority $authority, array $data) {
+    // Validates the given auth type.
+    $acceptable_auths = ['basic'];
+    if (isset($data['auth']) && in_array($data['auth'], $acceptable_auths)) throw new \Exception(
+      trans('api.errors.auth_type', [
+        'types' => implode(', ', $acceptable_auths),
+        'auth' => $data['auth']
+      ])
+    );
 
+    // Creates a new authority.
+    $new_authority = new Authority($data);
+    $new_authority->save();
+
+    // Constructs the property for the new authority.
+    $name = (string) $new_authority->_id;
+    $data = array_merge($data, [
+      'name' => $name,
+      'homePage' => $authority->homePage.'/'.$name,
+      'auth' => 'basic',
+      'description' => ''
+    ]);
+
+    // Generates credentials.
+    switch ($data['auth']) {
+      default: $data['credentials'] = $this->createBasicAuth();
+    }
+
+    // Updates the Authority.
+    $new_authority->update($data);
+    return $new_authority;
   }
 
   /**
@@ -74,11 +109,13 @@ class EloquentRepository implements Repository {
    * Updates an existing authority.
    * @param Authority $authority The Authority to restrict with.
    * @param String $id ID to match.
-   * @param AssocArray $data Properties to be updated.
+   * @param [String => mixed] $data Properties to be updated.
    * @return Authority
    */
-  public function update(Authority $authority, $id, $data) {
-
+  public function update(Authority $authority, $id, array $data) {
+    $updated_authority = $this->show($authority, $id);
+    $updated_authority->update($data);
+    return $updated_authority;
   }
 
   /**
@@ -88,6 +125,18 @@ class EloquentRepository implements Repository {
    * @return Boolean
    */
   public function destroy(Authority $authority, $id) {
+    $updated_authority = $this->show($authority, $id);
+    return $updated_authority->delete();
+  }
 
+  /**
+   * Creates basic auth credentials.
+   * @return [String => String]
+   */
+  private function createBasicAuth() {
+    return [
+      'username' => Helpers::getRandomSha(),
+      'password' => Helpers::getRandomSha()
+    ];
   }
 }

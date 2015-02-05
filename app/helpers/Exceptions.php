@@ -5,12 +5,15 @@ class Precondition extends \Exception {}
 
 class NotFound extends \Exception {
   public function __construct($id, $class) {
-    parent::__construct("Could not find $class with id $id.");
+    parent::__construct(trans('api.errors.not_found', [
+      'id' => $id,
+      'class' => $class
+    ]));
   }
 }
 
 class NoAuth extends \Exception {
   public function __construct() {
-    parent::__construct('Missing authorization.');
+    parent::__construct(trans('api.errors.missing_auth'));
   }
 }
