@@ -28,14 +28,23 @@ class EloquentGetter implements GetterInterface {
     if (strpos(json_encode($pipeline), '$out') !== false) return;
 
     // Ensures that you can't get statements from other LRSs.
-    $homePage = Helpers::replaceDots($authority->homePage);
-    $pipeline[0] = array_merge_recursive([
-      '$match' => [
-        'statement.authority.account.homePage' => new MongoRegex("/^$homePage/")
-      ]
-    ], $pipeline[0]);
+    $pipeline[0]['$match'] = $this->replaceDots($pipeline[0]['$match']);
+    $home_page = $authority->homePage;
+    $pipeline[0]['$match'] = array_merge_recursive([
+      'statement.authority.account.homePage' => new MongoRegex("/^$home_page/")
+    ], $pipeline[0]['$match']);
 
-    return Mongo::getMongoDB()->statements->aggregate($pipeline);
+    return Helpers::replaceHTMLDots(Mongo::getMongoDB()->statements->aggregate($pipeline));
+  }
+
+  private function replaceDots($value) {
+    if (is_array($value)) {
+      return array_map(function ($value) {
+        return $this->replaceDots($value);
+      }, $value);
+    } else {
+      return json_decode(str_replace('.', '&46;', json_encode($value)), true);
+    }
   }
 
   /**
@@ -49,13 +58,15 @@ class EloquentGetter implements GetterInterface {
     $options = $this->getIndexOptions($options);
     $this->validateIndexOptions($options);
 
-    // Constructs pipelines and aggregates statements.
+    // Constructs pipelines.
     $index_pipeline = $this->constructIndexPipeline($options);
     $statements_pipeline = $this->projectLimitedStatements($index_pipeline, $options);
     $count_pipeline = $this->projectCountedStatements($index_pipeline);
-    $statements = $this->aggregate($authority, $statements_pipeline)['result'];
-    $count = $this->aggregate($authority, $count_pipeline)['result'];
-    $count = isset($count[0]['count']) ? $count[0]['count'] : 0;
+
+    // Aggregates to retrieve statements and a count.
+    $statements = $this->aggregate($authority, $statements_pipeline)->result;
+    $count = $this->aggregate($authority, $count_pipeline)->result;
+    $count = isset($count[0]->count) ? $count[0]->count : 0;
 
     // Formats statements.
     switch ($options['format']) {
@@ -65,7 +76,7 @@ class EloquentGetter implements GetterInterface {
       default: throw new \Exception('Invalid format.');
     }
 
-    return [Helpers::replaceHTMLDots($statements), $count];
+    return [$statements, $count];
   }
 
   /**

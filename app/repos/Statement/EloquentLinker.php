@@ -200,6 +200,7 @@ class EloquentLinker implements LinkerInterface {
    * @return \Models\Statement
    */
   private function downRef(array $statement, Authority $authority) {
+    if (!$this->isReferencingArray($statement['statement'])) return null;
     return (new EloquentGetter)
       ->where($authority)
       ->where('statement.id', $statement['statement']['object']['id'])

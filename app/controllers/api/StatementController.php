@@ -18,7 +18,7 @@ class StatementController extends BaseController {
 
     // Returns the aggregation.
     return IlluminateResponse::json(
-      StatementRepository::aggregate($this->getAuthority(), $pipeline)
+      (new StatementRepository)->aggregate($this->getAuthority(), $pipeline)
     );
   }
 }

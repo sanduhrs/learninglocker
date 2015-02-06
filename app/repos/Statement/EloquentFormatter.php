@@ -18,7 +18,7 @@ class EloquentFormatter implements FormatterInterface {
    * @return [\stdClass]
    */
   public function toCanonical(array $statements, array $langs) {
-    $statements = json_decode(json_encode($statements));
+    $statements = $statements;
     return array_map(function (\stdClass $statement) use ($langs) {
       return $this->getStatementCanonical($statement, $langs);
     }, $statements);
@@ -30,7 +30,7 @@ class EloquentFormatter implements FormatterInterface {
    * @return [\stdClass]
    */
   public function toIds(array $statements) {
-    $statements = json_decode(json_encode($statements));
+    $statements = $statements;
     return array_map(function (\stdClass $statement) {
       return $this->getStatementIds($statement);
     }, $statements);
