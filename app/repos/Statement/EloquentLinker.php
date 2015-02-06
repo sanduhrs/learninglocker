@@ -29,11 +29,11 @@ class EloquentLinker implements LinkerInterface {
    */
   public function updateReferences(array $statements, Authority $authority) {
     $this->to_update = array_values(array_map(function (XAPIStatement $statement) use ($authority) {
-      return $this->addRefBy($statement, $authority);
+      return $this->getModel($statement, $authority);
     }, $statements));
 
     while (count($this->to_update) > 0) {
-      $this->updateLinks($this->to_update[0], $authority);
+      $this->upLink($this->to_update[0], [], $authority);
     }
   }
 
@@ -117,12 +117,12 @@ class EloquentLinker implements LinkerInterface {
   }
 
   /**
-   * Adds an array of all the statement ID's of statements that refer to the given statement.
+   * Gets the statement as an associative array from the database.
    * @param XAPIStatement $statement
    * @param Authority $authority The authority to restrict with.
-   * @return [String => mixed] Statement model with a refBy property.
+   * @return [String => mixed] Statement model.
    */
-  private function addRefBy(XAPIStatement $statement, Authority $authority) {
+  private function getModel(XAPIStatement $statement, Authority $authority) {
     $statement_id = $statement->getPropValue('id');
 
     $model = (new EloquentGetter)
@@ -130,61 +130,105 @@ class EloquentLinker implements LinkerInterface {
       ->where('statement.id', $statement_id)
       ->first()->toArray();
 
-    $model['refBy'] = (new EloquentGetter)
-      ->where($authority)
-      ->where('statement.object.id', $statement_id)
-      ->where('statement.object.objectType', 'StatementRef')
-      ->lists('statement.id');
-
     return $model;
   }
 
   /**
-   * Gets all of the statements referred to by the given statement.
+   * Goes up the reference chain until it reaches the top then goes down setting references.
    * @param [String => mixed] $statement
+   * @param [String] $visited IDs of statements visisted in the current chain (avoids infinite loop).
    * @param Authority $authority The authority to restrict with.
-   * @return [String => mixed] Referred statements.
+   * @return [[String => mixed]]
    */
-  private function getReferredStatement(array $statement, Authority $authority) {
-    return (new EloquentGetter)
-      ->where($authority)
-      ->where('statement.id', $statement['statement']['object']['id'])
-      ->first()->toArray();
+  private function upLink(array $statement, array $visited, Authority $authority) {
+    if (in_array($statement['statement']['id'], $visited)) return [];
+
+    $visited[] = $statement['statement']['id'];
+    $up_refs = $this->upRefs($statement, $authority);
+    if (count($up_refs) > 0) {
+      $downed = [];
+      return array_map(function ($up_ref) use ($authority, $visited, $downed) {
+        if (in_array($up_ref, $downed)) return;
+        $downed = array_merge($downed, $this->upLink($up_ref, $visited, $authority));
+      }, $up_refs);
+    } else {
+      return $this->downLink($statement, [], $authority);
+    }
   }
 
   /**
-   * Updates the links for a given statement
+   * Goes down the reference chain setting references (refs).
+   * @param [String => mixed] $statement
+   * @param [String] $visited IDs of statements visisted in the current chain (avoids infinite loop).
+   * @param Authority $authority The authority to restrict with.
+   * @return [[String => mixed]]
+   */
+  private function downLink(array $statement, array $visited, Authority $authority) {
+    if (in_array($statement['statement']['id'], $visited)) return [];
+
+    $visited[] = $statement['statement']['id'];
+    $down_ref = $this->downRef($statement, $authority);
+    if ($down_ref !== null) {
+      $refs = $this->downLink($down_ref->toArray(), $visited, $authority);
+      $this->setRefs($statement, $refs, $authority);
+      $this->unQueue($statement);
+      return array_merge([$statement], $refs);
+    } else {
+      $this->unQueue($statement);
+      return [$statement];
+    }
+  }
+
+  /**
+   * Gets the statements referencing the given statement.
    * @param [String => mixed] $statement
    * @param Authority $authority The authority to restrict with.
-   * @param [[String => mixed]]|null $refs Statements referred to by the given statement.
-   * @return [String => mixed] Referred statements.
+   * @return [[String => mixed]]
    */
-  private function updateLinks(array $statement, Authority $authority, array $refs = null) {
-    $statement_copy = $statement;
+  private function upRefs(array $statement, Authority $authority) {
+    return (new EloquentGetter)
+      ->where($authority)
+      ->where('statement.object.id', $statement['statement']['id'])
+      ->where('statement.object.objectType', 'StatementRef')
+      ->get()->toArray();
+  }
 
-    if ($refs === null && $this->isReferencingArray($statement['statement'])) {
-      $refs = $this->updateLinks($this->getReferredStatement($statement, $authority), $authority);
-    }
+  /**
+   * Gets the statement referred to by the given statement.
+   * @param [String => mixed] $statement
+   * @param Authority $authority The authority to restrict with.
+   * @return \Models\Statement
+   */
+  private function downRef(array $statement, Authority $authority) {
+    return (new EloquentGetter)
+      ->where($authority)
+      ->where('statement.id', $statement['statement']['object']['id'])
+      ->first();
+  }
 
-    // Updates stored refs.
-    $refs = array_merge($refs ?: [], isset($statement['refs']) ? $statement['refs'] : []);
+  /**
+   * Updates the refs for the given statement.
+   * @param [String => mixed] $statement
+   * @param [[String => mixed]] $refs Statements that are referenced by the given statement.
+   * @param Authority $authority The authority to restrict with. 
+   */
+  private function setRefs(array $statement, array $refs, Authority $authority) {
+    return (new EloquentGetter)
+      ->where($authority)
+      ->where('statement.id', $statement['statement']['id'])
+      ->update([
+        'refs' => $refs
+      ]);
+  }
 
-    // Saves statement with new refs.
-    (new EloquentGetter)->where($authority)->update([
-      'refs' => $refs
-    ]);
-
-    // Updates referrers refs.
-    array_map(function ($ref) {
-      $this->updateLinks($ref, $authority, $refs);
-    }, isset($statement['refBy']) ? $statement['refBy'] : []);
-
-    // Removes statement from to_update.
-    $updated_index = array_search($statement_copy, $this->to_update);
+  /**
+   * Unqueues the statement so that it doesn't get relinked.
+   * @param [String => mixed] $statement
+   */
+  private function unQueue(array $statement) {
+    $updated_index = array_search($statement, $this->to_update);
     if ($updated_index !== false) {
       array_splice($this->to_update, $updated_index, 1);
     }
-
-    return $refs;
   }
 }

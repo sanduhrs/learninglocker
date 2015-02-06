@@ -51,7 +51,8 @@
       "app/controllers",
       "app/helpers",
       "app/models",
-      "app/repos"
+      "app/repos",
+      "app/tests"
     ]
   },
   "scripts": {
