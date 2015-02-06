@@ -11,6 +11,7 @@ interface LinkerInterface {
 
 class EloquentLinker implements LinkerInterface {
   private $to_update = [];
+  private $downed = [];
 
   /**
    * Links statements together.
@@ -92,7 +93,7 @@ class EloquentLinker implements LinkerInterface {
    * @return Boolean
    */
   private function isReferencingArray(array $statement) {
-    return $this->isVoiding(XAPIStatement::createFromJson(json_encode($statement)));
+    return $this->isReferencing(XAPIStatement::createFromJson(json_encode($statement)));
   }
 
   /**
@@ -146,10 +147,9 @@ class EloquentLinker implements LinkerInterface {
     $visited[] = $statement['statement']['id'];
     $up_refs = $this->upRefs($statement, $authority);
     if (count($up_refs) > 0) {
-      $downed = [];
-      return array_map(function ($up_ref) use ($authority, $visited, $downed) {
-        if (in_array($up_ref, $downed)) return;
-        $downed = array_merge($downed, $this->upLink($up_ref, $visited, $authority));
+      return array_map(function ($up_ref) use ($authority, $visited) {
+        if (in_array($up_ref, $this->downed)) return;
+        $this->downed = array_merge($this->downed, $this->upLink($up_ref, $visited, $authority));
       }, $up_refs);
     } else {
       return $this->downLink($statement, [], $authority);
@@ -164,9 +164,11 @@ class EloquentLinker implements LinkerInterface {
    * @return [[String => mixed]]
    */
   private function downLink(array $statement, array $visited, Authority $authority) {
-    if (in_array($statement['statement']['id'], $visited)) return [];
+    if (in_array($statement, $visited)) {
+      return array_slice($visited, array_search($statement, $visited));
+    }
 
-    $visited[] = $statement['statement']['id'];
+    $visited[] = $statement;
     $down_ref = $this->downRef($statement, $authority);
     if ($down_ref !== null) {
       $refs = $this->downLink($down_ref->toArray(), $visited, $authority);
@@ -218,7 +220,7 @@ class EloquentLinker implements LinkerInterface {
       ->where($authority)
       ->where('statement.id', $statement['statement']['id'])
       ->update([
-        'refs' => $refs
+        'refs' => array_unique($refs, SORT_REGULAR)
       ]);
   }
 

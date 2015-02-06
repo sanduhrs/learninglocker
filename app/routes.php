@@ -12,7 +12,7 @@ Route::get('data/xAPI/about', function() {
 });
 
 Route::group(['prefix'=>'data/xAPI'], function () {
-  Route::any('statements', 'Controllers\XAPI\StatementController@selectMethod');
+  Route::any('statements', ['as'=>'xapi.statement', 'uses'=>'Controllers\XAPI\StatementController@selectMethod']);
   Route::any('activities/state', 'Controllers\XAPI\Document\StateController@selectMethod');
   Route::any('activities/profile', 'Controllers\XAPI\Document\ActivityProfileController@selectMethod');
   Route::get('activities', 'Controllers\XAPI\Document\ActivityProfileController@full');

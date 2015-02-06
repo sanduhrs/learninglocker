@@ -7,6 +7,7 @@ interface Repository {
   public function index(Authority $authority, array $options);
   public function show(Authority $authority, $id, $voided = false, $active = true);
   public function store(Authority $authority, array $statements, array $attachments);
+  public function where(Authority $authority);
 }
 
 class EloquentRepository implements Repository {
@@ -24,5 +25,9 @@ class EloquentRepository implements Repository {
 
   public function store(Authority $authority, array $statements, array $attachments) {
     return (new EloquentStorer)->store($statements, $authority, $attachments);
+  }
+
+  public function where(Authority $authority) {
+    return (new EloquentGetter)->where($authority);
   }
 }

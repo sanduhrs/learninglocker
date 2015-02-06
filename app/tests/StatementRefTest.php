@@ -64,7 +64,15 @@ class StatementRefTest extends TestCase {
       return $ref['statement']['id'];
     }, $referrers);
 
+    \Log::info([
+      'id' => $id,
+      'expected_referrers' => $expected_referrers,
+      'referrers' => $referrers,
+      'expected_references' => $expected_references,
+      'references' => $references
+    ]);
     $this->assertEmpty(array_diff($expected_referrers, $referrers));
+    $this->assertEmpty(array_diff($expected_references, $references));
   }
 
   private function generateUUID($id) {
@@ -74,14 +82,17 @@ class StatementRefTest extends TestCase {
   }
 
   public function testInsert1() {
+    \Log::info('START TEST 1');
     $this->sendStatements([
       $this->createIdStatement('A', $this->createReferenceStatement('E'))
     ]);
 
     $this->checkStatement('A', [], []);
+    \Log::info('END TEST 1');
   }
 
   public function testInsert2() {
+    \Log::info('START TEST 2');
     $this->sendStatements([
       $this->createIdStatement('A', $this->createReferenceStatement('E'))
     ]);
@@ -94,9 +105,11 @@ class StatementRefTest extends TestCase {
     $this->checkStatement('A', [], ['C']);
     $this->checkStatement('C', ['A'], []);
     $this->checkStatement('D', [], []);
+    \Log::info('END TEST 2');
   }
 
   public function testInsert3() {
+    \Log::info('START TEST 3');
     $this->sendStatements([
         $this->createIdStatement('A', $this->createReferenceStatement('E'))
     ]);
@@ -114,9 +127,11 @@ class StatementRefTest extends TestCase {
     $this->checkStatement('B', ['A'], ['D']);
     $this->checkStatement('C', ['A'], []);
     $this->checkStatement('D', ['B', 'A'], []);
+    \Log::info('END TEST 3');
   }
 
   public function testInsert4() {
+    \Log::info('START TEST 4');
     $this->sendStatements([
         $this->createIdStatement('A', $this->createReferenceStatement('E'))
     ]);
@@ -139,9 +154,11 @@ class StatementRefTest extends TestCase {
     $this->checkStatement('C', ['A', 'E', 'D', 'B'], []);
     $this->checkStatement('D', ['B', 'A', 'E'], ['E']);
     $this->checkStatement('E', ['D', 'B', 'A'], ['A']);
+    \Log::info('END TEST 4');
   }
 
   public function testInsert5() {
+    \Log::info('START TEST 5');
     $this->sendStatements([
         $this->createIdStatement('A', $this->createReferenceStatement('E'))
     ]);
@@ -169,11 +186,13 @@ class StatementRefTest extends TestCase {
     $this->checkStatement('D', ['B', 'A', 'E'], ['E']);
     $this->checkStatement('E', ['D', 'B', 'A'], ['A']);
     $this->checkStatement('F', ['D', 'B', 'A', 'E'], []);
+    \Log::info('END TEST 5');
   }
 
   public function tearDown() {
     parent::tearDown();
-    if ($this->authority)  $this->authority->delete();
+    (new StatementRepo)->where($this->authority)->delete();
+    if ($this->authority) $this->authority->delete();
   }
 
 }

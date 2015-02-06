@@ -211,7 +211,12 @@ class StatementController extends BaseController {
     if ($total <= $next_offset) return '';
 
     // Changes (when defined) or appends (when undefined) offset.
-    $current_url = IlluminateRequest::fullUrl();
+    //$current_url = IlluminateRequest::fullUrl();
+
+    $query = IlluminateRequest::getQueryString();
+    $statement_route = \URL::route('xapi.statement', [], false);
+    $current_url = $query ? $statement_route.'?'.$query : $statement_route;
+
     if (!$no_offset) {
       return str_replace(
         'offset=' . $offset,
