@@ -70,7 +70,7 @@ class EloquentRepository implements Repository {
     );
 
     // Creates a new authority.
-    $new_authority = new Authority($data);
+    $new_authority = new Authority();
     $new_authority->save();
 
     // Constructs the property for the new authority.
@@ -127,8 +127,8 @@ class EloquentRepository implements Repository {
    * @return Boolean
    */
   public function destroy(Authority $authority, $id) {
-    $updated_authority = $this->show($authority, $id);
-    return $updated_authority->delete();
+    $shown_authority = $this->show($authority, $id);
+    return $shown_authority->delete();
   }
 
   /**

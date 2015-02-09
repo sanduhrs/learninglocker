@@ -13,10 +13,12 @@ class Authority extends Model {
    */
   public function getActor() {
     return (object) [
+      'name' => $this->description,
       'account' => (object) [
         'name' => $this->name,
         'homePage' => $this->homePage
-      ]
+      ],
+      'objectType' => 'Agent'
     ];
   }
 }
