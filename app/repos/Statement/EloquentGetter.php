@@ -29,7 +29,7 @@ class EloquentGetter implements GetterInterface {
 
     // Ensures that you can't get statements from other LRSs.
     $pipeline[0]['$match'] = $this->replaceDots($pipeline[0]['$match']);
-    $home_page = $authority->homePage;
+    $home_page = Helpers::replaceDots($authority->homePage);
     $pipeline[0]['$match'] = array_merge_recursive([
       'statement.authority.account.homePage' => new MongoRegex("/^$home_page/")
     ], $pipeline[0]['$match']);
@@ -109,7 +109,7 @@ class EloquentGetter implements GetterInterface {
     return Statement::where(
       'statement.authority.account.homePage',
       'like',
-      $authority->homePage.'%'
+      Helpers::replaceDots($authority->homePage).'%'
     );
   }
 

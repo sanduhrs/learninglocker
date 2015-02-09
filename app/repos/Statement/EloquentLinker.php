@@ -213,7 +213,7 @@ class EloquentLinker implements LinkerInterface {
    * Updates the refs for the given statement.
    * @param [String => mixed] $statement
    * @param [[String => mixed]] $refs Statements that are referenced by the given statement.
-   * @param Authority $authority The authority to restrict with. 
+   * @param Authority $authority The authority to restrict with.
    */
   private function setRefs(array $statement, array $refs, Authority $authority) {
     return (new EloquentGetter)
