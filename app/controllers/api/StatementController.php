@@ -21,4 +21,15 @@ class StatementController extends BaseController {
       (new StatementRepository)->aggregate($this->getAuthority(), $pipeline)
     );
   }
+
+  /**
+   * Aggregates statements via the Mongo aggregation.
+   * @return \Illuminate\Http\JsonResponse Aggregated statements.
+   */
+  public function analytics() {
+    return IlluminateResponse::json(
+      (new StatementRepository)->query($this->getAuthority(), LockerRequest::getParams())
+    );
+  }
+
 }

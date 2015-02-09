@@ -8,6 +8,7 @@ interface Repository {
   public function show(Authority $authority, $id, $voided = false, $active = true);
   public function store(Authority $authority, array $statements, array $attachments);
   public function where(Authority $authority);
+  public function query(Authority $authority, array $options);
 }
 
 class EloquentRepository implements Repository {
@@ -29,5 +30,9 @@ class EloquentRepository implements Repository {
 
   public function where(Authority $authority) {
     return (new EloquentGetter)->where($authority);
+  }
+
+  public function query(Authority $authority, array $options) {
+    return (new EloquentAggregator)->aggregate($authority, $options);
   }
 }

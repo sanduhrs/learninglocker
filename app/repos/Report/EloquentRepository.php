@@ -62,11 +62,12 @@ class EloquentRepository implements Repository {
    */
   public function store(Authority $authority, array $data) {
     $data['authority'] = $authority->homePage;
+    $data['query'] = (object) $data['query'];
 
     // Validates data.
     XAPIHelpers::checkType('name', 'string', $data['name']);
     XAPIHelpers::checkType('description', 'string', $data['description']);
-    XAPIHelpers::checkType('query', 'array', $data['query']);
+    XAPIHelpers::checkType('query', 'stdClass', $data['query']);
     XAPIHelpers::checkType('authority', 'string', $data['authority']);
 
     $report = new Report($data);
@@ -88,7 +89,10 @@ class EloquentRepository implements Repository {
     // Validates data.
     if (isset($data['name'])) XAPIHelpers::checkType('name', 'string', $data['name']);
     if (isset($data['description'])) XAPIHelpers::checkType('description', 'string', $data['description']);
-    if (isset($data['query'])) XAPIHelpers::checkType('query', 'array', $data['query']);
+    if (isset($data['query'])) {
+      $data['query'] = (object) $data['query'];
+      XAPIHelpers::checkType('query', 'stdClass', $data['query']);
+    }
     if (isset($data['authority'])) XAPIHelpers::checkType('authority', 'string', $data['authority']);
 
     $report->update($data);
